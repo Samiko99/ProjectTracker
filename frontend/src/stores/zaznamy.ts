@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { db, type WorkEntry, type MaterialEntry } from '../db/dexie'
+import { uuid } from '../utils/uuid'
 
 export const useZaznamyStore = defineStore('zaznamy', () => {
   const workEntries = ref<WorkEntry[]>([])
@@ -46,7 +47,7 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
   ) {
     const entry: WorkEntry = {
       ...data,
-      id: crypto.randomUUID(),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -80,7 +81,7 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
   ) {
     const entry: MaterialEntry = {
       ...data,
-      id: crypto.randomUUID(),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

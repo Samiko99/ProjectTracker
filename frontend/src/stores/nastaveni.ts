@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { db, type WorkType, type Collaborator } from '../db/dexie'
+import { uuid } from '../utils/uuid'
 
 export const useNastaveniStore = defineStore('nastaveni', () => {
   const workTypes = ref<WorkType[]>([])
@@ -28,7 +29,7 @@ export const useNastaveniStore = defineStore('nastaveni', () => {
   ) {
     const wt: WorkType = {
       ...data,
-      id: crypto.randomUUID(),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -57,7 +58,7 @@ export const useNastaveniStore = defineStore('nastaveni', () => {
   ) {
     const collab: Collaborator = {
       ...data,
-      id: crypto.randomUUID(),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

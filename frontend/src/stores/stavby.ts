@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { db, type Project } from '../db/dexie'
+import { uuid } from '../utils/uuid'
 
 export const useStavbyStore = defineStore('stavby', () => {
   const projects = ref<Project[]>([])
@@ -22,7 +23,7 @@ export const useStavbyStore = defineStore('stavby', () => {
   ) {
     const project: Project = {
       ...data,
-      id: crypto.randomUUID(),
+      id: uuid(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
