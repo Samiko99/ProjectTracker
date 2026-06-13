@@ -1,0 +1,43 @@
+name: stavebni-denik
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-stavdenik}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?nastav DB_PASSWORD v .env}
+      POSTGRES_DB: ${DB_NAME:-stavebni_denik}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-stavdenik} -d ${DB_NAME:-stavebni_denik}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-stavdenik}:${DB_PASSWORD}@db:5432/${DB_NAME:-stavebni_denik}?schema=public
+      PORT: "3001"
+      CORS_ORIGIN: ${APP_ORIGIN:-http://192.168.100.150:9009}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?nastav JWT_ACCESS_SECRET v .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?nastav JWT_REFRESH_SECRET v .env}
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES_DAYS: "7"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-9009}:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:

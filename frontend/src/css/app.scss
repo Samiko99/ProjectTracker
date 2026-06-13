@@ -1,0 +1,113 @@
+// App global styles
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: 'Roboto', sans-serif;
+  background: #F5F5F5;
+  overscroll-behavior: none;
+}
+
+// Page container
+.q-page {
+  background: #F5F5F5;
+}
+
+// Safe area for iOS bottom bar
+.q-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+// Card shadows
+.app-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+// Page header
+.page-header {
+  background: white;
+  padding: 16px 16px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid #F0F0F0;
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin: 0;
+  }
+}
+
+// Empty state
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  color: #9E9E9E;
+}
+
+// Bottom sheet dialogs
+.bottom-sheet-dialog {
+  .q-dialog__inner {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .dialog-card {
+    border-radius: 20px 20px 0 0;
+    padding: 0;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+
+    .drag-handle {
+      width: 40px;
+      height: 4px;
+      background: #E0E0E0;
+      border-radius: 2px;
+      margin: 12px auto 8px;
+    }
+  }
+}
+
+// Stat chips
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+// Section label
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #9E9E9E;
+  padding: 16px 16px 8px;
+}
+
+// Color dot
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}

@@ -1,0 +1,152 @@
+// Stavební deník — datový model
+// Lokálně: SQLite. Na VPS: změň provider na "postgresql" a DATABASE_URL v .env.
+// Typy (String/DateTime/Boolean/Float) jsou kompatibilní s oběma DB.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // ZMĚŇ na "postgresql" pro VPS
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  projects      Project[]
+  workTypes     WorkType[]
+  collaborators Collaborator[]
+  workEntries   WorkEntry[]
+  materials     MaterialEntry[]
+  backups       SyncBackup[]
+  refreshTokens RefreshToken[]
+}
+
+// Tokeny pro refresh (uložené v DB, aby šly zneplatnit)
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// --- Synchronizované entity ---
+// id pochází z klienta (crypto.randomUUID), proto bez @default.
+// updatedAt / deletedAt řídí timestamp-based sync.
+
+model Project {
+  id        String    @id
+  userId    String
+  name      String
+  address   String    @default("")
+  notes     String    @default("")
+  color     String    @default("#E65100")
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime?
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workEntries WorkEntry[]
+  materials   MaterialEntry[]
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+}
+
+model WorkType {
+  id         String    @id
+  userId     String
+  name       String
+  hourlyRate Float     @default(0)
+  createdAt  DateTime
+  updatedAt  DateTime
+  deletedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+}
+
+model Collaborator {
+  id        String    @id
+  userId    String
+  name      String
+  createdAt DateTime
+  updatedAt DateTime
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+}
+
+model WorkEntry {
+  id             String    @id
+  userId         String
+  projectId      String
+  collaboratorId String    @default("")
+  workTypeId     String    @default("")
+  date           String // YYYY-MM-DD
+  startTime      String? // HH:mm
+  endTime        String? // HH:mm
+  hours          Float     @default(0)
+  notes          String    @default("")
+  isPaid         Boolean   @default(false)
+  createdAt      DateTime
+  updatedAt      DateTime
+  deletedAt      DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@index([projectId])
+}
+
+model MaterialEntry {
+  id          String    @id
+  userId      String
+  projectId   String
+  date        String
+  description String    @default("")
+  amount      Float     @default(0)
+  paidById    String    @default("")
+  notes       String    @default("")
+  isPaid      Boolean   @default(false)
+  createdAt   DateTime
+  updatedAt   DateTime
+  deletedAt   DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@index([projectId])
+}
+
+// JSON snapshot pro zálohy (posledních 5 na uživatele).
+// data je String (JSON), aby fungoval i na SQLite.
+model SyncBackup {
+  id        String   @id @default(uuid())
+  userId    String
+  data      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

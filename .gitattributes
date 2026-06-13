@@ -1,0 +1,2 @@
+# Shell skripty vždy s LF (jinak by se v Linux kontejneru rozbil shebang)
+*.sh text eol=lf
