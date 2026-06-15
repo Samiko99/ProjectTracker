@@ -61,11 +61,11 @@
         <q-list dense style="min-width: 130px">
           <q-item clickable v-close-popup @click="$emit('edit', entry)">
             <q-item-section avatar><q-icon name="edit" size="16px" /></q-item-section>
-            <q-item-section>Upravit</q-item-section>
+            <q-item-section>{{ t('common.edit') }}</q-item-section>
           </q-item>
           <q-item clickable v-close-popup @click="$emit('delete', entry)" class="text-negative">
             <q-item-section avatar><q-icon name="delete" size="16px" color="negative" /></q-item-section>
-            <q-item-section>Smazat</q-item-section>
+            <q-item-section>{{ t('common.delete') }}</q-item-section>
           </q-item>
         </q-list>
       </q-menu>
@@ -79,7 +79,7 @@ import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
 import type { WorkEntry } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
-import { cs } from 'date-fns/locale'
+import { t, dateFnsLocale } from '../i18n'
 
 const props = defineProps<{ entry: WorkEntry }>()
 defineEmits<{
@@ -106,7 +106,7 @@ const earnings = computed(() => {
 
 function formatDate(d: string) {
   try {
-    return format(parseISO(d), 'd. M. yyyy (EEEE)', { locale: cs })
+    return format(parseISO(d), 'd. M. yyyy (EEEE)', { locale: dateFnsLocale() })
   } catch {
     return d
   }

@@ -5,17 +5,17 @@
     <div class="souhrn-grid">
       <div class="souhrn-item">
         <div class="souhrn-value">{{ formatHours(totalHours) }}</div>
-        <div class="souhrn-label">Celkem hodin</div>
+        <div class="souhrn-label">{{ t('summary.totalHours') }}</div>
       </div>
       <div class="souhrn-divider" />
       <div class="souhrn-item highlight">
         <div class="souhrn-value text-warning">{{ formatHours(unpaidHours) }}</div>
-        <div class="souhrn-label">Nezaplaceno</div>
+        <div class="souhrn-label">{{ t('summary.unpaid') }}</div>
       </div>
       <div v-if="showEarnings" class="souhrn-divider" />
       <div v-if="showEarnings" class="souhrn-item">
         <div class="souhrn-value text-positive">{{ formatPrice(unpaidEarnings) }}</div>
-        <div class="souhrn-label">K proplacení</div>
+        <div class="souhrn-label">{{ t('summary.toPay') }}</div>
       </div>
     </div>
 
@@ -45,6 +45,7 @@
 import { computed } from 'vue'
 import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
+import { t } from '../i18n'
 
 const props = defineProps<{
   projectId: string

@@ -48,6 +48,21 @@ export const useStavbyStore = defineStore('stavby', () => {
     projects.value = projects.value.filter((p) => p.id !== id)
   }
 
+  async function closeProject(id: string) {
+    const now = new Date().toISOString()
+    await db.projects.update(id, { closedAt: now, updatedAt: now })
+    const idx = projects.value.findIndex((p) => p.id === id)
+    if (idx !== -1) projects.value[idx] = { ...projects.value[idx], closedAt: now, updatedAt: now }
+  }
+
+  async function reopenProject(id: string) {
+    const now = new Date().toISOString()
+    // null = znovu otevřeno (propaguje se synchronizací)
+    await db.projects.update(id, { closedAt: null as unknown as undefined, updatedAt: now })
+    const idx = projects.value.findIndex((p) => p.id === id)
+    if (idx !== -1) projects.value[idx] = { ...projects.value[idx], closedAt: undefined, updatedAt: now }
+  }
+
   function getProjectById(id: string) {
     return projects.value.find((p) => p.id === id)
   }
@@ -59,6 +74,8 @@ export const useStavbyStore = defineStore('stavby', () => {
     addProject,
     updateProject,
     deleteProject,
+    closeProject,
+    reopenProject,
     getProjectById,
   }
 })

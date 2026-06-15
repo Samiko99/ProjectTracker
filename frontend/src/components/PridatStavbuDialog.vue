@@ -4,7 +4,7 @@
       <div class="drag-handle" />
 
       <div class="dialog-header q-px-md q-pb-sm">
-        <div class="dialog-title">{{ isEdit ? 'Upravit stavbu' : 'Nová stavba' }}</div>
+        <div class="dialog-title">{{ isEdit ? t('jobDialog.editTitle') : t('jobDialog.newTitle') }}</div>
       </div>
 
       <q-separator />
@@ -12,17 +12,17 @@
       <div class="q-pa-md">
         <q-input
           v-model="form.name"
-          label="Název stavby *"
+          :label="t('jobDialog.name')"
           outlined
           dense
           class="q-mb-sm"
-          :rules="[(v) => !!v || 'Povinné pole']"
+          :rules="[(v) => !!v || t('jobDialog.required')]"
           ref="nameRef"
         />
 
         <q-input
           v-model="form.address"
-          label="Adresa"
+          :label="t('jobDialog.address')"
           outlined
           dense
           class="q-mb-sm"
@@ -30,7 +30,7 @@
 
         <q-input
           v-model="form.notes"
-          label="Poznámka"
+          :label="t('jobDialog.notes')"
           outlined
           dense
           type="textarea"
@@ -39,7 +39,7 @@
         />
 
         <div class="q-mb-md">
-          <div class="text-caption text-grey-6 q-mb-xs">Barva stavby</div>
+          <div class="text-caption text-grey-6 q-mb-xs">{{ t('jobDialog.color') }}</div>
           <div class="color-picker">
             <div
               v-for="color in PROJECT_COLORS"
@@ -56,11 +56,11 @@
       <q-separator />
 
       <div class="q-pa-md row gap-sm justify-end">
-        <q-btn flat label="Zrušit" @click="show = false" />
+        <q-btn flat :label="t('common.cancel')" @click="show = false" />
         <q-btn
           unelevated
           color="primary"
-          :label="isEdit ? 'Uložit' : 'Přidat stavbu'"
+          :label="isEdit ? t('common.save') : t('jobs.add')"
           :loading="saving"
           @click="save"
         />
@@ -74,6 +74,7 @@ import { ref, watch, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useStavbyStore } from '../stores/stavby'
 import type { Project } from '../db/dexie'
+import { t } from '../i18n'
 
 const PROJECT_COLORS = [
   '#E65100', '#1565C0', '#2E7D32', '#6A1B9A',
@@ -144,7 +145,7 @@ async function save() {
     emit('saved')
   } catch (e) {
     console.error('Save failed:', e)
-    $q.notify({ type: 'negative', message: 'Chyba při ukládání: ' + (e as Error).message })
+    $q.notify({ type: 'negative', message: t('jobDialog.saveError', { msg: (e as Error).message }) })
   } finally {
     saving.value = false
   }

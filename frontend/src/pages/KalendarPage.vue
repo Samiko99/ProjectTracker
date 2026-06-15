@@ -1,7 +1,7 @@
 <template>
   <q-page class="kalendar-page">
     <div class="page-header">
-      <h1 class="page-title">Kalendář</h1>
+      <h1 class="page-title">{{ t('calendar.title') }}</h1>
       <div class="view-toggle">
         <q-btn-toggle
           v-model="calView"
@@ -11,9 +11,9 @@
           size="sm"
           no-caps
           :options="[
-            { label: 'Měsíc', value: 'dayGridMonth' },
-            { label: 'Týden', value: 'timeGridWeek' },
-            { label: 'Den', value: 'timeGridDay' },
+            { label: t('calendar.month'), value: 'dayGridMonth' },
+            { label: t('calendar.week'), value: 'timeGridWeek' },
+            { label: t('calendar.day'), value: 'timeGridDay' },
           ]"
           @update:model-value="changeView"
         />
@@ -31,7 +31,7 @@
         <div class="q-pa-md">
           <div class="text-subtitle1 text-weight-bold q-mb-sm">{{ previewDateLabel }}</div>
           <div v-if="previewEvents.length === 0" class="text-caption text-grey-5 q-py-md text-center">
-            Žádné záznamy pro tento den
+            {{ t('calendar.noEntries') }}
           </div>
           <div
             v-for="ev in previewEvents"
@@ -59,12 +59,13 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import csLocale from '@fullcalendar/core/locales/cs'
+import enLocale from '@fullcalendar/core/locales/en-gb'
 import type { CalendarOptions, EventInput } from '@fullcalendar/core'
 import { useStavbyStore } from '../stores/stavby'
 import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
 import { format, parseISO } from 'date-fns'
-import { cs } from 'date-fns/locale'
+import { t, locale, dateFnsLocale } from '../i18n'
 
 const router = useRouter()
 const stavbyStore = useStavbyStore()
@@ -80,7 +81,7 @@ const previewEvents = ref<EventInput[]>([])
 const previewDateLabel = computed(() => {
   if (!previewDate.value) return ''
   try {
-    return format(parseISO(previewDate.value), 'EEEE d. MMMM yyyy', { locale: cs })
+    return format(parseISO(previewDate.value), 'EEEE d. MMMM yyyy', { locale: dateFnsLocale() })
   } catch {
     return previewDate.value
   }
@@ -105,7 +106,7 @@ const calendarEvents = computed((): EventInput[] => {
 
       return {
         id: entry.id,
-        title: project?.name ?? 'Stavba',
+        title: project?.name ?? t('nav.jobs'),
         start: entry.startTime
           ? `${entry.date}T${entry.startTime}`
           : entry.date,
@@ -129,7 +130,7 @@ const calendarEvents = computed((): EventInput[] => {
 const calendarOptions = computed(
   (): CalendarOptions => ({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
-    locale: csLocale,
+    locale: locale.value === 'en' ? enLocale : csLocale,
     initialView: calView.value,
     headerToolbar: {
       left: 'prev',

@@ -2,16 +2,36 @@
   <q-page class="detail-page">
     <!-- Header -->
     <div class="detail-header" :style="{ borderBottom: `3px solid ${project?.color ?? '#E65100'}` }">
-      <div class="header-top">
-        <q-btn flat round dense icon="arrow_back" color="grey-7" @click="router.back()" />
-        <div class="header-title-area">
-          <h1 class="detail-title">{{ project?.name ?? '...' }}</h1>
-          <div v-if="project?.address" class="detail-address">
-            <q-icon name="location_on" size="13px" />
-            {{ project.address }}
-          </div>
-        </div>
-        <q-btn flat round dense icon="edit" color="grey-6" @click="editProject" />
+      <div class="header-row">
+        <q-btn flat round dense icon="arrow_back" color="grey-8" @click="router.back()" />
+        <h1 class="detail-title">{{ project?.name ?? '...' }}</h1>
+        <q-btn flat round dense icon="more_vert" color="grey-8">
+          <q-menu anchor="bottom right" self="top right">
+            <q-list dense style="min-width: 220px">
+              <q-item clickable v-close-popup @click="editProject">
+                <q-item-section avatar><q-icon name="edit" size="18px" /></q-item-section>
+                <q-item-section>{{ t('jobMenu.editDetails') }}</q-item-section>
+              </q-item>
+              <q-item clickable v-close-popup @click="markAllPaid">
+                <q-item-section avatar><q-icon name="done_all" size="18px" color="positive" /></q-item-section>
+                <q-item-section>{{ t('jobMenu.markAllPaid') }}</q-item-section>
+              </q-item>
+              <q-separator spaced />
+              <q-item v-if="!project?.closedAt" clickable v-close-popup @click="closeJob">
+                <q-item-section avatar><q-icon name="check_circle" size="18px" color="primary" /></q-item-section>
+                <q-item-section>{{ t('jobMenu.close') }}</q-item-section>
+              </q-item>
+              <q-item v-else clickable v-close-popup @click="reopenJob">
+                <q-item-section avatar><q-icon name="undo" size="18px" color="primary" /></q-item-section>
+                <q-item-section>{{ t('jobMenu.reopen') }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+      </div>
+      <div v-if="project?.address" class="detail-address">
+        <q-icon name="location_on" size="13px" />
+        {{ project.address }}
       </div>
     </div>
 
@@ -19,7 +39,7 @@
     <div class="q-pa-md">
       <hodiny-souhrn
         :project-id="projectId"
-        title="Přehled hodin"
+        :title="t('summary.title')"
         :show-earnings="true"
       />
 
@@ -31,8 +51,8 @@
           flat
           no-caps
           :options="[
-            { label: `Hodiny (${workEntries.length})`, value: 'hodiny' },
-            { label: `Materiál (${materialEntries.length})`, value: 'material' },
+            { label: `${t('detail.tabHours')} (${workEntries.length})`, value: 'hodiny' },
+            { label: `${t('detail.tabMaterial')} (${materialEntries.length})`, value: 'material' },
           ]"
         />
       </div>
@@ -41,7 +61,7 @@
       <div v-if="activeSection === 'hodiny'" class="app-card q-pa-md">
         <div v-if="workEntries.length === 0" class="empty-state" style="padding: 32px 0">
           <q-icon name="schedule" size="40px" color="grey-3" />
-          <div class="text-caption text-grey-4 q-mt-sm">Zatím žádné záznamy</div>
+          <div class="text-caption text-grey-4 q-mt-sm">{{ t('detail.noHours') }}</div>
         </div>
         <div v-else>
           <zaznam-radek
@@ -58,7 +78,7 @@
       <div v-if="activeSection === 'material'" class="app-card q-pa-md">
         <div v-if="materialEntries.length === 0" class="empty-state" style="padding: 32px 0">
           <q-icon name="inventory_2" size="40px" color="grey-3" />
-          <div class="text-caption text-grey-4 q-mt-sm">Zatím žádný materiál</div>
+          <div class="text-caption text-grey-4 q-mt-sm">{{ t('detail.noMaterial') }}</div>
         </div>
         <div v-else>
           <material-radek
@@ -73,26 +93,29 @@
     </div>
 
     <!-- FAB – přidat záznam -->
-    <q-page-sticky position="bottom-right" :offset="[20, 84]">
+    <q-page-sticky position="bottom-right" :offset="[16, 88]">
       <q-fab
         v-model="fabOpen"
         color="primary"
         icon="add"
         direction="up"
+        vertical-actions-align="right"
         unelevated
       >
         <q-fab-action
           color="primary"
           icon="schedule"
-          label="Přidat hodiny"
+          :label="t('detail.addHours')"
           label-position="left"
+          external-label
           @click="openAddHodiny"
         />
         <q-fab-action
           color="secondary"
           icon="inventory_2"
-          label="Přidat materiál"
+          :label="t('detail.addMaterial')"
           label-position="left"
+          external-label
           @click="openAddMaterial"
         />
       </q-fab>
@@ -135,7 +158,7 @@ import PridatHodinyDialog from '../components/PridatHodinyDialog.vue'
 import PridatMaterialDialog from '../components/PridatMaterialDialog.vue'
 import type { WorkEntry, MaterialEntry } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
-import { cs } from 'date-fns/locale'
+import { t, dateFnsLocale } from '../i18n'
 
 // Inline material row component
 const MaterialRadek = defineComponent({
@@ -146,7 +169,7 @@ const MaterialRadek = defineComponent({
   setup(props, { emit }) {
     const nastaveniStore = useNastaveniStore()
     const formatDate = (d: string) => {
-      try { return format(parseISO(d), 'd. M. yyyy', { locale: cs }) } catch { return d }
+      try { return format(parseISO(d), 'd. M. yyyy', { locale: dateFnsLocale() }) } catch { return d }
     }
     const formatPrice = (p: number) =>
       new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 }).format(p)
@@ -161,7 +184,7 @@ const MaterialRadek = defineComponent({
           ]),
           h('div', { class: 'mat-desc' }, props.entry.description),
           props.entry.paidById
-            ? h('div', { class: 'mat-paid-by' }, `Platil: ${nastaveniStore.getCollaboratorName(props.entry.paidById)}`)
+            ? h('div', { class: 'mat-paid-by' }, t('detail.paidBy', { name: nastaveniStore.getCollaboratorName(props.entry.paidById) }))
             : null,
           props.entry.notes ? h('div', { class: 'mat-notes' }, props.entry.notes) : null,
         ]),
@@ -170,11 +193,11 @@ const MaterialRadek = defineComponent({
             default: () => h('q-list', { dense: true, style: 'min-width: 130px' }, [
               h('q-item', { clickable: true, 'v-close-popup': true, onClick: () => emit('edit', props.entry) }, [
                 h('q-item-section', { avatar: true }, [h('q-icon', { name: 'edit', size: '16px' })]),
-                h('q-item-section', {}, 'Upravit'),
+                h('q-item-section', {}, t('common.edit')),
               ]),
               h('q-item', { clickable: true, 'v-close-popup': true, class: 'text-negative', onClick: () => emit('delete', props.entry) }, [
                 h('q-item-section', { avatar: true }, [h('q-icon', { name: 'delete', size: '16px', color: 'negative' })]),
-                h('q-item-section', {}, 'Smazat'),
+                h('q-item-section', {}, t('common.delete')),
               ]),
             ]),
           }),
@@ -212,6 +235,36 @@ function editProject() {
   showEditProject.value = true
 }
 
+function markAllPaid() {
+  $q.dialog({
+    title: t('jobMenu.markAllPaidTitle'),
+    message: t('jobMenu.markAllPaidMsg'),
+    cancel: { flat: true, label: t('common.cancel') },
+    ok: { color: 'positive', unelevated: true, label: t('common.save') },
+  }).onOk(async () => {
+    await zaznamyStore.markAllPaidForProject(projectId)
+    $q.notify({ type: 'positive', message: t('jobs.allMarkedPaid') })
+  })
+}
+
+function closeJob() {
+  $q.dialog({
+    title: t('jobMenu.closeTitle'),
+    message: t('jobMenu.closeMsg'),
+    cancel: { flat: true, label: t('common.cancel') },
+    ok: { color: 'primary', unelevated: true, label: t('jobMenu.close') },
+  }).onOk(async () => {
+    await stavbyStore.closeProject(projectId)
+    $q.notify({ type: 'positive', message: t('jobs.closed') })
+    router.back()
+  })
+}
+
+async function reopenJob() {
+  await stavbyStore.reopenProject(projectId)
+  $q.notify({ type: 'positive', message: t('jobs.reopened') })
+}
+
 function openAddHodiny() {
   fabOpen.value = false
   editingEntry.value = null
@@ -236,7 +289,7 @@ function openEditMaterial(entry: MaterialEntry) {
 
 function onProjectSaved() {
   showEditProject.value = false
-  $q.notify({ type: 'positive', message: 'Stavba upravena' })
+  $q.notify({ type: 'positive', message: t('jobs.updated') })
 }
 
 function onHodinySaved() {
@@ -251,10 +304,10 @@ function onMaterialSaved() {
 
 async function confirmDeleteEntry(entry: WorkEntry) {
   $q.dialog({
-    title: 'Smazat záznam',
-    message: 'Opravdu smazat tento záznam?',
-    cancel: { label: 'Zrušit', flat: true },
-    ok: { label: 'Smazat', color: 'negative', unelevated: true },
+    title: t('detail.deleteEntryTitle'),
+    message: t('detail.deleteEntryMsg'),
+    cancel: { label: t('common.cancel'), flat: true },
+    ok: { label: t('common.delete'), color: 'negative', unelevated: true },
   }).onOk(async () => {
     await zaznamyStore.deleteWorkEntry(entry.id)
   })
@@ -262,10 +315,10 @@ async function confirmDeleteEntry(entry: WorkEntry) {
 
 async function confirmDeleteMaterial(entry: MaterialEntry) {
   $q.dialog({
-    title: 'Smazat materiál',
-    message: 'Opravdu smazat tento záznam?',
-    cancel: { label: 'Zrušit', flat: true },
-    ok: { label: 'Smazat', color: 'negative', unelevated: true },
+    title: t('detail.deleteEntryTitle'),
+    message: t('detail.deleteEntryMsg'),
+    cancel: { label: t('common.cancel'), flat: true },
+    ok: { label: t('common.delete'), color: 'negative', unelevated: true },
   }).onOk(async () => {
     await zaznamyStore.deleteMaterialEntry(entry.id)
   })
@@ -280,38 +333,33 @@ async function confirmDeleteMaterial(entry: MaterialEntry) {
 
 .detail-header {
   background: white;
-  padding: 8px 16px 14px;
+  padding: 6px 8px 14px;
 }
 
-.header-top {
+.header-row {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.header-title-area {
-  flex: 1;
-  min-width: 0;
-  padding-top: 4px;
+  align-items: center;
+  gap: 4px;
 }
 
 .detail-title {
-  font-size: 20px;
+  flex: 1;
+  min-width: 0;
+  font-size: 25px;
   font-weight: 700;
   color: #1A1A1A;
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.15;
+  word-break: break-word;
 }
 
 .detail-address {
-  font-size: 12px;
+  font-size: 13px;
   color: #757575;
   display: flex;
   align-items: center;
-  gap: 2px;
-  margin-top: 2px;
+  gap: 3px;
+  margin: 2px 0 0 12px;
 }
 
 .section-tabs {

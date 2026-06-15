@@ -54,6 +54,7 @@ model Project {
   createdAt DateTime
   updatedAt DateTime
   deletedAt DateTime?
+  closedAt  DateTime? // uzavřená/hotová zakázka
 
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   workEntries WorkEntry[]

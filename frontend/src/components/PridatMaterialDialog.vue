@@ -4,7 +4,7 @@
       <div class="drag-handle" />
 
       <div class="dialog-header q-px-md q-pb-sm">
-        <div class="dialog-title">{{ isEdit ? 'Upravit materiál' : 'Přidat materiál' }}</div>
+        <div class="dialog-title">{{ isEdit ? t('material.editTitle') : t('material.addTitle') }}</div>
       </div>
 
       <q-separator />
@@ -12,7 +12,7 @@
       <div class="q-pa-md">
         <q-input
           v-model="form.date"
-          label="Datum *"
+          :label="t('material.date')"
           outlined
           dense
           class="q-mb-sm"
@@ -24,7 +24,7 @@
               <q-popup-proxy cover>
                 <q-date v-model="form.date" mask="YYYY-MM-DD" today-btn>
                   <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Zavřít" color="primary" flat />
+                    <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                   </div>
                 </q-date>
               </q-popup-proxy>
@@ -34,16 +34,15 @@
 
         <q-input
           v-model="form.description"
-          label="Popis materiálu *"
+          :label="t('material.description')"
           outlined
           dense
           class="q-mb-sm"
-          placeholder="Např. Zásuvka, kabel 10m…"
         />
 
         <q-input
           v-model.number="form.amount"
-          label="Částka (Kč)"
+          :label="t('material.amount')"
           outlined
           dense
           type="number"
@@ -55,18 +54,18 @@
         <q-select
           v-model="form.paidById"
           :options="collaboratorOptions"
-          label="Kdo platil"
+          :label="t('material.paidBy')"
           outlined
           dense
           emit-value
           map-options
           class="q-mb-sm"
-          :display-value="form.paidById ? nastaveniStore.getCollaboratorName(form.paidById) : 'Vyberte osobu'"
+          :display-value="form.paidById ? nastaveniStore.getCollaboratorName(form.paidById) : t('hours.selectWorker')"
         />
 
         <q-input
           v-model="form.notes"
-          label="Poznámka"
+          :label="t('material.note')"
           outlined
           dense
           type="textarea"
@@ -78,11 +77,11 @@
       <q-separator />
 
       <div class="q-pa-md row gap-sm justify-end">
-        <q-btn flat label="Zrušit" @click="show = false" />
+        <q-btn flat :label="t('common.cancel')" @click="show = false" />
         <q-btn
           unelevated
           color="secondary"
-          :label="isEdit ? 'Uložit' : 'Přidat'"
+          :label="isEdit ? t('common.save') : t('common.add')"
           :loading="saving"
           @click="save"
         />
@@ -98,6 +97,7 @@ import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
 import type { MaterialEntry } from '../db/dexie'
 import { format } from 'date-fns'
+import { t } from '../i18n'
 
 const props = defineProps<{
   modelValue: boolean
@@ -179,7 +179,7 @@ async function save() {
     emit('saved')
   } catch (e) {
     console.error('Save failed:', e)
-    $q.notify({ type: 'negative', message: 'Chyba při ukládání: ' + (e as Error).message })
+    $q.notify({ type: 'negative', message: t('jobDialog.saveError', { msg: (e as Error).message }) })
   } finally {
     saving.value = false
   }

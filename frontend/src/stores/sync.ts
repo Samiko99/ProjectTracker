@@ -40,7 +40,7 @@ function table(name: TableName) {
 function cleanRecord(rec: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...rec }
   delete out.userId
-  for (const key of ['deletedAt', 'startTime', 'endTime']) {
+  for (const key of ['deletedAt', 'startTime', 'endTime', 'closedAt']) {
     if (out[key] === null) delete out[key]
   }
   return out

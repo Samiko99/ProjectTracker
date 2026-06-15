@@ -76,6 +76,22 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
     await updateWorkEntry(id, { isPaid })
   }
 
+  // Označí všechny (nezaplacené) záznamy hodin zakázky jako zaplacené
+  async function markAllPaidForProject(projectId: string) {
+    const now = new Date().toISOString()
+    const toUpdate = workEntries.value.filter(
+      (e) => e.projectId === projectId && !e.isPaid,
+    )
+    for (const e of toUpdate) {
+      await db.workEntries.update(e.id, { isPaid: true, updatedAt: now })
+      const idx = workEntries.value.findIndex((x) => x.id === e.id)
+      if (idx !== -1) {
+        workEntries.value[idx] = { ...workEntries.value[idx], isPaid: true, updatedAt: now }
+      }
+    }
+    return toUpdate.length
+  }
+
   async function addMaterialEntry(
     data: Omit<MaterialEntry, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
   ) {
@@ -168,6 +184,7 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
     updateWorkEntry,
     deleteWorkEntry,
     togglePaid,
+    markAllPaidForProject,
     addMaterialEntry,
     updateMaterialEntry,
     deleteMaterialEntry,

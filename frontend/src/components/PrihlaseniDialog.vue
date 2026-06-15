@@ -5,10 +5,10 @@
 
       <div class="dialog-header q-px-md q-pb-sm">
         <div class="dialog-title">
-          {{ mode === 'login' ? 'Přihlášení' : 'Registrace' }}
+          {{ mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle') }}
         </div>
         <div class="dialog-sub">
-          {{ mode === 'login' ? 'Přihlas se pro synchronizaci dat' : 'Vytvoř si účet pro zálohu a synchronizaci' }}
+          {{ mode === 'login' ? t('auth.loginSub') : t('auth.registerSub') }}
         </div>
       </div>
 
@@ -18,14 +18,14 @@
         <q-input
           v-if="mode === 'register'"
           v-model="form.name"
-          label="Jméno *"
+          :label="t('auth.name')"
           outlined
           dense
           class="q-mb-sm"
         />
         <q-input
           v-model="form.email"
-          label="E-mail *"
+          :label="t('auth.email')"
           type="email"
           outlined
           dense
@@ -34,7 +34,7 @@
         />
         <q-input
           v-model="form.password"
-          label="Heslo *"
+          :label="t('auth.password')"
           :type="showPassword ? 'text' : 'password'"
           outlined
           dense
@@ -59,21 +59,21 @@
           unelevated
           color="primary"
           class="full-width q-mt-sm"
-          :label="mode === 'login' ? 'Přihlásit se' : 'Zaregistrovat se'"
+          :label="mode === 'login' ? t('auth.loginBtn') : t('auth.registerBtn')"
           :loading="submitting"
           @click="submit"
         />
 
         <div class="switch-mode q-mt-md text-center">
           <span class="text-grey-6">
-            {{ mode === 'login' ? 'Nemáš účet?' : 'Už máš účet?' }}
+            {{ mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount') }}
           </span>
           <q-btn
             flat
             dense
             no-caps
             color="primary"
-            :label="mode === 'login' ? 'Zaregistruj se' : 'Přihlas se'"
+            :label="mode === 'login' ? t('auth.goRegister') : t('auth.goLogin')"
             @click="toggleMode"
           />
         </div>
@@ -86,6 +86,7 @@
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/auth'
+import { t } from '../i18n'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{
@@ -126,11 +127,11 @@ function toggleMode() {
 async function submit() {
   errorMsg.value = ''
   if (!form.value.email.trim() || !form.value.password) {
-    errorMsg.value = 'Vyplň e-mail a heslo'
+    errorMsg.value = t('auth.fillEmailPass')
     return
   }
   if (mode.value === 'register' && !form.value.name.trim()) {
-    errorMsg.value = 'Vyplň jméno'
+    errorMsg.value = t('auth.fillName')
     return
   }
 
@@ -145,7 +146,7 @@ async function submit() {
         form.value.name.trim(),
       )
     }
-    $q.notify({ type: 'positive', message: 'Přihlášeno' })
+    $q.notify({ type: 'positive', message: t('auth.loggedIn') })
     show.value = false
     emit('logged-in')
   } catch (e) {

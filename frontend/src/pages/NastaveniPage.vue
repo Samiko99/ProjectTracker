@@ -1,7 +1,7 @@
 <template>
   <q-page class="nastaveni-page">
     <div class="page-header">
-      <h1 class="page-title">Nastavení</h1>
+      <h1 class="page-title">{{ t('settings.title') }}</h1>
     </div>
 
     <div class="q-pa-md">
@@ -9,8 +9,8 @@
       <div class="section-card app-card q-mb-md">
         <div class="section-head">
           <div>
-            <div class="section-name">Synchronizace</div>
-            <div class="section-sub">Záloha a sdílení dat přes server</div>
+            <div class="section-name">{{ t('settings.sync') }}</div>
+            <div class="section-sub">{{ t('settings.syncSub') }}</div>
           </div>
           <q-icon
             :name="authStore.isAuthenticated ? 'cloud_done' : 'cloud_off'"
@@ -24,12 +24,12 @@
         <!-- Nepřihlášen -->
         <div v-if="!authStore.isAuthenticated">
           <div class="text-caption text-grey-6 q-mb-sm">
-            Aplikace funguje i offline. Přihlas se pro zálohu dat na server a synchronizaci mezi zařízeními.
+            {{ t('settings.offlineHint') }}
           </div>
           <q-btn
             unelevated
             color="primary"
-            label="Přihlásit se / Registrace"
+            :label="t('settings.loginRegister')"
             icon="login"
             class="full-width"
             @click="showLoginDialog = true"
@@ -38,7 +38,7 @@
           <q-expansion-item
             dense
             dense-toggle
-            label="Adresa serveru"
+            :label="t('settings.serverAddress')"
             header-class="text-grey-6 text-caption q-px-none q-mt-sm"
             class="server-config"
           >
@@ -47,7 +47,7 @@
               outlined
               dense
               label="API URL"
-              hint="Např. https://tvuj-server.cz/api"
+              :hint="t('settings.apiUrlHint')"
               class="q-mt-xs"
             >
               <template #append>
@@ -68,13 +68,13 @@
               <div class="account-email">{{ authStore.user?.email }}</div>
             </div>
             <q-btn flat round dense icon="logout" color="grey-6" @click="doLogout">
-              <q-tooltip>Odhlásit</q-tooltip>
+              <q-tooltip>{{ t('settings.logout') }}</q-tooltip>
             </q-btn>
           </div>
 
           <div class="sync-status q-mt-sm">
             <q-icon name="schedule" size="14px" color="grey-5" />
-            <span>Naposledy: {{ lastSyncLabel }}</span>
+            <span>{{ t('settings.lastSync', { time: lastSyncLabel }) }}</span>
           </div>
 
           <div class="row q-gutter-sm q-mt-sm">
@@ -82,7 +82,7 @@
               unelevated
               color="primary"
               icon="sync"
-              label="Synchronizovat"
+              :label="t('settings.syncNow')"
               :loading="syncStore.syncing"
               class="col"
               @click="doSync"
@@ -91,7 +91,7 @@
               outline
               color="primary"
               icon="backup"
-              label="Zálohy"
+              :label="t('settings.backups')"
               @click="openBackups"
             />
           </div>
@@ -102,8 +102,8 @@
       <div class="section-card app-card">
         <div class="section-head">
           <div>
-            <div class="section-name">Spolupracovníci</div>
-            <div class="section-sub">Osoby přidávané k záznamům</div>
+            <div class="section-name">{{ t('settings.collaborators') }}</div>
+            <div class="section-sub">{{ t('settings.collaboratorsSub') }}</div>
           </div>
           <q-btn flat round dense icon="add" color="primary" @click="openAddCollab" />
         </div>
@@ -112,7 +112,7 @@
 
         <div v-if="nastaveniStore.collaborators.length === 0" class="empty-inline">
           <q-icon name="person_add" size="28px" color="grey-3" />
-          <span class="text-caption text-grey-4 q-ml-sm">Zatím žádní spolupracovníci</span>
+          <span class="text-caption text-grey-4 q-ml-sm">{{ t('settings.noCollaborators') }}</span>
         </div>
 
         <q-list dense>
@@ -143,8 +143,8 @@
       <div class="section-card app-card q-mt-md">
         <div class="section-head">
           <div>
-            <div class="section-name">Typy práce</div>
-            <div class="section-sub">S hodinovou sazbou v Kč</div>
+            <div class="section-name">{{ t('settings.workTypes') }}</div>
+            <div class="section-sub">{{ t('settings.workTypesSub') }}</div>
           </div>
           <q-btn flat round dense icon="add" color="secondary" @click="openAddWorkType" />
         </div>
@@ -153,7 +153,7 @@
 
         <div v-if="nastaveniStore.workTypes.length === 0" class="empty-inline">
           <q-icon name="work_outline" size="28px" color="grey-3" />
-          <span class="text-caption text-grey-4 q-ml-sm">Zatím žádné typy práce</span>
+          <span class="text-caption text-grey-4 q-ml-sm">{{ t('settings.noWorkTypes') }}</span>
         </div>
 
         <q-list dense>
@@ -169,7 +169,7 @@
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ wt.name }}</q-item-label>
-              <q-item-label caption>{{ formatPrice(wt.hourlyRate) }}/hod</q-item-label>
+              <q-item-label caption>{{ formatPrice(wt.hourlyRate) }}/{{ t('common.hoursShort') }}</q-item-label>
             </q-item-section>
             <q-item-section side>
               <div class="row gap-xs">
@@ -181,9 +181,35 @@
         </q-list>
       </div>
 
+      <!-- Jazyk -->
+      <div class="section-card app-card q-mt-md">
+        <div class="section-head">
+          <div>
+            <div class="section-name">{{ t('settings.language') }}</div>
+            <div class="section-sub">{{ t('settings.languageSub') }}</div>
+          </div>
+          <q-icon name="translate" color="grey-5" size="22px" />
+        </div>
+        <q-separator class="q-my-sm" />
+        <q-btn-toggle
+          :model-value="locale"
+          spread
+          no-caps
+          unelevated
+          toggle-color="primary"
+          color="grey-2"
+          text-color="grey-8"
+          :options="[
+            { label: 'Čeština', value: 'cs' },
+            { label: 'English', value: 'en' },
+          ]"
+          @update:model-value="onLanguageChange"
+        />
+      </div>
+
       <!-- Info -->
       <div class="app-version q-mt-lg text-center text-caption text-grey-4">
-        Stavební Deník v0.1.0
+        {{ t('settings.version') }}
       </div>
     </div>
 
@@ -192,13 +218,13 @@
       <q-card class="dialog-card">
         <div class="drag-handle" />
         <div class="q-px-md q-py-sm text-subtitle1 text-weight-bold">
-          {{ editingCollab ? 'Upravit spolupracovníka' : 'Nový spolupracovník' }}
+          {{ editingCollab ? t('settings.editCollaborator') : t('settings.newCollaborator') }}
         </div>
         <q-separator />
         <div class="q-pa-md">
           <q-input
             v-model="collabForm.name"
-            label="Jméno *"
+            :label="t('settings.collabName')"
             outlined
             dense
             autofocus
@@ -207,8 +233,8 @@
         </div>
         <q-separator />
         <div class="q-pa-md row gap-sm justify-end">
-          <q-btn flat label="Zrušit" @click="showCollabDialog = false" />
-          <q-btn unelevated color="primary" :label="editingCollab ? 'Uložit' : 'Přidat'" :loading="saving" @click="saveCollab" />
+          <q-btn flat :label="t('common.cancel')" @click="showCollabDialog = false" />
+          <q-btn unelevated color="primary" :label="editingCollab ? t('common.save') : t('common.add')" :loading="saving" @click="saveCollab" />
         </div>
       </q-card>
     </q-dialog>
@@ -218,32 +244,32 @@
       <q-card class="dialog-card">
         <div class="drag-handle" />
         <div class="q-px-md q-py-sm text-subtitle1 text-weight-bold">
-          {{ editingWorkType ? 'Upravit typ práce' : 'Nový typ práce' }}
+          {{ editingWorkType ? t('settings.editWorkType') : t('settings.newWorkType') }}
         </div>
         <q-separator />
         <div class="q-pa-md">
           <q-input
             v-model="workTypeForm.name"
-            label="Název *"
+            :label="t('settings.workTypeName')"
             outlined
             dense
             class="q-mb-sm"
-            placeholder="Např. Elektromontáž, Projektování…"
+            :placeholder="t('settings.workTypeNameHint')"
           />
           <q-input
             v-model.number="workTypeForm.hourlyRate"
-            label="Hodinová sazba (Kč)"
+            :label="t('settings.hourlyRate')"
             outlined
             dense
             type="number"
             min="0"
-            suffix="Kč/hod"
+            :suffix="t('settings.perHour')"
           />
         </div>
         <q-separator />
         <div class="q-pa-md row gap-sm justify-end">
-          <q-btn flat label="Zrušit" @click="showWorkTypeDialog = false" />
-          <q-btn unelevated color="secondary" :label="editingWorkType ? 'Uložit' : 'Přidat'" :loading="saving" @click="saveWorkType" />
+          <q-btn flat :label="t('common.cancel')" @click="showWorkTypeDialog = false" />
+          <q-btn unelevated color="secondary" :label="editingWorkType ? t('common.save') : t('common.add')" :loading="saving" @click="saveWorkType" />
         </div>
       </q-card>
     </q-dialog>
@@ -256,8 +282,8 @@
       <q-card class="dialog-card">
         <div class="drag-handle" />
         <div class="q-px-md q-py-sm">
-          <div class="text-subtitle1 text-weight-bold">Zálohy na serveru</div>
-          <div class="text-caption text-grey-6">Drží se posledních 5 záloh</div>
+          <div class="text-subtitle1 text-weight-bold">{{ t('settings.backupsTitle') }}</div>
+          <div class="text-caption text-grey-6">{{ t('settings.backupsSub') }}</div>
         </div>
         <q-separator />
         <div class="q-pa-md">
@@ -265,7 +291,7 @@
             unelevated
             color="primary"
             icon="add"
-            label="Vytvořit zálohu"
+            :label="t('settings.createBackup')"
             class="full-width q-mb-md"
             :loading="backupBusy"
             @click="doCreateBackup"
@@ -273,7 +299,7 @@
 
           <div v-if="backups.length === 0" class="empty-inline">
             <q-icon name="inventory_2" size="24px" color="grey-3" />
-            <span class="text-caption text-grey-4 q-ml-sm">Zatím žádné zálohy</span>
+            <span class="text-caption text-grey-4 q-ml-sm">{{ t('settings.noBackups') }}</span>
           </div>
 
           <q-list separator>
@@ -290,7 +316,7 @@
                   dense
                   no-caps
                   color="primary"
-                  label="Obnovit"
+                  :label="t('common.restore')"
                   @click="doRestore(b.id)"
                 />
               </q-item-section>
@@ -312,12 +338,16 @@ import { getApiBaseUrl, setApiBaseUrl } from '../api/client'
 import PrihlaseniDialog from '../components/PrihlaseniDialog.vue'
 import type { Collaborator, WorkType } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
-import { cs } from 'date-fns/locale'
+import { t, locale, setLocale, dateFnsLocale, type Locale } from '../i18n'
 
 const $q = useQuasar()
 const nastaveniStore = useNastaveniStore()
 const authStore = useAuthStore()
 const syncStore = useSyncStore()
+
+function onLanguageChange(l: Locale) {
+  setLocale(l)
+}
 
 const saving = ref(false)
 
@@ -329,12 +359,12 @@ const backupBusy = ref(false)
 const apiUrl = ref(getApiBaseUrl())
 
 const lastSyncLabel = computed(() =>
-  syncStore.lastSyncAt ? formatDateTime(syncStore.lastSyncAt) : 'nikdy',
+  syncStore.lastSyncAt ? formatDateTime(syncStore.lastSyncAt) : t('settings.never'),
 )
 
 function formatDateTime(iso: string) {
   try {
-    return format(parseISO(iso), 'd. M. yyyy HH:mm', { locale: cs })
+    return format(parseISO(iso), 'd. M. yyyy HH:mm', { locale: dateFnsLocale() })
   } catch {
     return iso
   }
@@ -343,7 +373,7 @@ function formatDateTime(iso: string) {
 function saveApiUrl() {
   setApiBaseUrl(apiUrl.value.trim())
   apiUrl.value = getApiBaseUrl()
-  $q.notify({ type: 'positive', message: 'Adresa serveru uložena' })
+  $q.notify({ type: 'positive', message: t('settings.apiUrlSaved') })
 }
 
 async function doSync() {
@@ -351,7 +381,7 @@ async function doSync() {
     const res = await syncStore.syncNow()
     $q.notify({
       type: 'positive',
-      message: `Synchronizováno (odesláno ${res.pushed}, přijato ${res.pulled})`,
+      message: t('settings.synced', { pushed: res.pushed, pulled: res.pulled }),
     })
   } catch (e) {
     $q.notify({ type: 'negative', message: (e as Error).message })
@@ -365,14 +395,14 @@ function onLoggedIn() {
 
 function doLogout() {
   $q.dialog({
-    title: 'Odhlásit se',
-    message: 'Lokální data zůstanou v zařízení. Opravdu se odhlásit?',
-    cancel: { flat: true, label: 'Zrušit' },
-    ok: { color: 'negative', unelevated: true, label: 'Odhlásit' },
+    title: t('settings.logoutTitle'),
+    message: t('settings.logoutMsg'),
+    cancel: { flat: true, label: t('common.cancel') },
+    ok: { color: 'negative', unelevated: true, label: t('settings.logout') },
   }).onOk(async () => {
     await authStore.logout()
     syncStore.resetSyncState()
-    $q.notify({ type: 'positive', message: 'Odhlášeno' })
+    $q.notify({ type: 'positive', message: t('settings.loggedOut') })
   })
 }
 
@@ -390,7 +420,7 @@ async function doCreateBackup() {
   try {
     await syncStore.createBackup()
     backups.value = await syncStore.listBackups()
-    $q.notify({ type: 'positive', message: 'Záloha vytvořena' })
+    $q.notify({ type: 'positive', message: t('settings.backupCreated') })
   } catch (e) {
     $q.notify({ type: 'negative', message: (e as Error).message })
   } finally {
@@ -400,15 +430,15 @@ async function doCreateBackup() {
 
 function doRestore(id: string) {
   $q.dialog({
-    title: 'Obnovit ze zálohy',
-    message: 'Tímto přepíšeš lokální data zálohou ze serveru. Pokračovat?',
-    cancel: { flat: true, label: 'Zrušit' },
-    ok: { color: 'primary', unelevated: true, label: 'Obnovit' },
+    title: t('settings.restoreTitle'),
+    message: t('settings.restoreMsg'),
+    cancel: { flat: true, label: t('common.cancel') },
+    ok: { color: 'primary', unelevated: true, label: t('common.restore') },
   }).onOk(async () => {
     try {
       await syncStore.restoreBackup(id)
       showBackupsDialog.value = false
-      $q.notify({ type: 'positive', message: 'Data obnovena ze zálohy' })
+      $q.notify({ type: 'positive', message: t('settings.restored') })
     } catch (e) {
       $q.notify({ type: 'negative', message: (e as Error).message })
     }
@@ -451,7 +481,7 @@ async function saveCollab() {
       await nastaveniStore.addCollaborator({ name: collabForm.value.name })
     }
     showCollabDialog.value = false
-    $q.notify({ type: 'positive', message: editingCollab.value ? 'Spolupracovník upraven' : 'Spolupracovník přidán' })
+    $q.notify({ type: 'positive', message: editingCollab.value ? t('settings.collabUpdated') : t('settings.collabAdded') })
   } finally {
     saving.value = false
   }
@@ -459,13 +489,13 @@ async function saveCollab() {
 
 async function deleteCollab(collab: Collaborator) {
   $q.dialog({
-    title: 'Smazat spolupracovníka',
-    message: `Smazat "${collab.name}"?`,
-    cancel: { flat: true, label: 'Zrušit' },
-    ok: { color: 'negative', unelevated: true, label: 'Smazat' },
+    title: t('settings.deleteCollabTitle'),
+    message: t('settings.deleteCollabMsg', { name: collab.name }),
+    cancel: { flat: true, label: t('common.cancel') },
+    ok: { color: 'negative', unelevated: true, label: t('common.delete') },
   }).onOk(async () => {
     await nastaveniStore.deleteCollaborator(collab.id)
-    $q.notify({ type: 'positive', message: 'Spolupracovník smazán' })
+    $q.notify({ type: 'positive', message: t('settings.collabDeleted') })
   })
 }
 
@@ -491,7 +521,7 @@ async function saveWorkType() {
       await nastaveniStore.addWorkType(workTypeForm.value)
     }
     showWorkTypeDialog.value = false
-    $q.notify({ type: 'positive', message: editingWorkType.value ? 'Typ práce upraven' : 'Typ práce přidán' })
+    $q.notify({ type: 'positive', message: editingWorkType.value ? t('settings.workTypeUpdated') : t('settings.workTypeAdded') })
   } finally {
     saving.value = false
   }
@@ -499,13 +529,13 @@ async function saveWorkType() {
 
 async function deleteWorkType(wt: WorkType) {
   $q.dialog({
-    title: 'Smazat typ práce',
-    message: `Smazat "${wt.name}"?`,
-    cancel: { flat: true, label: 'Zrušit' },
-    ok: { color: 'negative', unelevated: true, label: 'Smazat' },
+    title: t('settings.deleteWorkTypeTitle'),
+    message: t('settings.deleteWorkTypeMsg', { name: wt.name }),
+    cancel: { flat: true, label: t('common.cancel') },
+    ok: { color: 'negative', unelevated: true, label: t('common.delete') },
   }).onOk(async () => {
     await nastaveniStore.deleteWorkType(wt.id)
-    $q.notify({ type: 'positive', message: 'Typ práce smazán' })
+    $q.notify({ type: 'positive', message: t('settings.workTypeDeleted') })
   })
 }
 

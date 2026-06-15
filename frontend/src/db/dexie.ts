@@ -9,6 +9,7 @@ export interface Project {
   createdAt: string
   updatedAt: string
   deletedAt?: string
+  closedAt?: string // uzavřená/hotová zakázka
 }
 
 export interface WorkType {

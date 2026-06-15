@@ -1,5 +1,5 @@
 <template>
-  <div class="stavba-karta app-card" @click="$emit('click')">
+  <div class="stavba-karta app-card" :class="{ 'is-closed': closed }" @click="$emit('click')">
     <div class="karta-header">
       <div class="color-badge" :style="{ background: project.color }" />
       <div class="karta-info">
@@ -18,19 +18,31 @@
         size="sm"
         @click.stop
       >
-        <q-menu>
-          <q-list dense style="min-width: 140px">
+        <q-menu anchor="bottom right" self="top right">
+          <q-list dense style="min-width: 170px">
             <q-item clickable v-close-popup @click="$emit('edit', project)">
               <q-item-section avatar>
                 <q-icon name="edit" size="18px" />
               </q-item-section>
-              <q-item-section>Upravit</q-item-section>
+              <q-item-section>{{ t('common.edit') }}</q-item-section>
+            </q-item>
+            <q-item v-if="!closed" clickable v-close-popup @click="$emit('close', project)">
+              <q-item-section avatar>
+                <q-icon name="check_circle" size="18px" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ t('jobMenu.close') }}</q-item-section>
+            </q-item>
+            <q-item v-else clickable v-close-popup @click="$emit('reopen', project)">
+              <q-item-section avatar>
+                <q-icon name="undo" size="18px" color="primary" />
+              </q-item-section>
+              <q-item-section>{{ t('jobMenu.reopen') }}</q-item-section>
             </q-item>
             <q-item clickable v-close-popup @click="$emit('delete', project)" class="text-negative">
               <q-item-section avatar>
                 <q-icon name="delete" size="18px" color="negative" />
               </q-item-section>
-              <q-item-section>Smazat</q-item-section>
+              <q-item-section>{{ t('common.delete') }}</q-item-section>
             </q-item>
           </q-list>
         </q-menu>
@@ -43,12 +55,12 @@
       <div class="stat-item">
         <q-icon name="schedule" size="14px" color="grey-5" />
         <span class="stat-value">{{ formatHours(totalHoursSync) }}</span>
-        <span class="stat-label">celkem</span>
+        <span class="stat-label">{{ t('jobs.total') }}</span>
       </div>
       <div v-if="unpaidHours > 0" class="stat-item stat-unpaid">
         <q-icon name="payments" size="14px" color="warning" />
         <span class="stat-value text-warning">{{ formatHours(unpaidHours) }}</span>
-        <span class="stat-label">nezaplaceno</span>
+        <span class="stat-label">{{ t('jobs.unpaid') }}</span>
       </div>
       <q-space />
       <q-icon name="chevron_right" color="grey-4" size="20px" />
@@ -60,12 +72,15 @@
 import { computed } from 'vue'
 import { useZaznamyStore } from '../stores/zaznamy'
 import type { Project } from '../db/dexie'
+import { t } from '../i18n'
 
-const props = defineProps<{ project: Project }>()
+const props = defineProps<{ project: Project; closed?: boolean }>()
 defineEmits<{
   click: []
   edit: [project: Project]
   delete: [project: Project]
+  close: [project: Project]
+  reopen: [project: Project]
 }>()
 
 const zaznamyStore = useZaznamyStore()
@@ -100,6 +115,15 @@ function formatHours(h: number) {
   &:active {
     transform: scale(0.99);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  &.is-closed {
+    opacity: 0.72;
+    background: #fafafa;
+
+    .karta-nazev {
+      color: #616161;
+    }
   }
 }
 

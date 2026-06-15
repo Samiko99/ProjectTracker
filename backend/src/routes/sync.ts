@@ -83,6 +83,7 @@ syncRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
     address: (r as never as { address?: string }).address ?? '',
     notes: (r as never as { notes?: string }).notes ?? '',
     color: (r as never as { color?: string }).color ?? '#E65100',
+    closedAt: toDate((r as never as { closedAt?: string | null }).closedAt),
     createdAt: new Date((r as IncomingBase).createdAt),
     updatedAt: new Date((r as IncomingBase).updatedAt),
     deletedAt: toDate((r as IncomingBase).deletedAt),

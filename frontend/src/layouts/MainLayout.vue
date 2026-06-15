@@ -17,15 +17,15 @@
       >
         <q-tab name="stavby" class="nav-tab">
           <q-icon :name="activeTab === 'stavby' ? 'business' : 'o_business'" size="22px" />
-          <div class="nav-label">Stavby</div>
+          <div class="nav-label">{{ t('nav.jobs') }}</div>
         </q-tab>
         <q-tab name="kalendar" class="nav-tab">
           <q-icon :name="activeTab === 'kalendar' ? 'calendar_month' : 'o_calendar_month'" size="22px" />
-          <div class="nav-label">Kalendář</div>
+          <div class="nav-label">{{ t('nav.calendar') }}</div>
         </q-tab>
         <q-tab name="nastaveni" class="nav-tab">
           <q-icon :name="activeTab === 'nastaveni' ? 'settings' : 'o_settings'" size="22px" />
-          <div class="nav-label">Nastavení</div>
+          <div class="nav-label">{{ t('nav.settings') }}</div>
         </q-tab>
       </q-tabs>
     </q-footer>
@@ -35,15 +35,27 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import langCs from 'quasar/lang/cs'
+import langEnUS from 'quasar/lang/en-US'
 import { useNastaveniStore } from '../stores/nastaveni'
 import { useStavbyStore } from '../stores/stavby'
 import { useAuthStore } from '../stores/auth'
+import { t, locale } from '../i18n'
 
 const route = useRoute()
 const router = useRouter()
+const $q = useQuasar()
 const nastaveniStore = useNastaveniStore()
 const stavbyStore = useStavbyStore()
 const authStore = useAuthStore()
+
+// Jazyk Quasar komponent (date/time picker, …) podle locale
+function applyQuasarLang(l: string) {
+  $q.lang.set(l === 'en' ? langEnUS : langCs)
+}
+applyQuasarLang(locale.value)
+watch(locale, applyQuasarLang)
 
 // Bootstrap stores on app load
 authStore.init()

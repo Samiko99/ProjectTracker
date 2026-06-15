@@ -4,7 +4,7 @@
       <div class="drag-handle" />
 
       <div class="dialog-header q-px-md q-pb-sm">
-        <div class="dialog-title">{{ isEdit ? 'Upravit záznam' : 'Přidat hodiny' }}</div>
+        <div class="dialog-title">{{ isEdit ? t('hours.editTitle') : t('hours.addTitle') }}</div>
       </div>
 
       <q-separator />
@@ -15,7 +15,7 @@
           <!-- Datum -->
           <q-input
             v-model="form.date"
-            label="Datum *"
+            :label="t('hours.date')"
             outlined
             dense
             class="q-mb-sm"
@@ -27,7 +27,7 @@
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-date v-model="form.date" mask="YYYY-MM-DD" today-btn>
                     <div class="row items-center justify-end">
-                      <q-btn v-close-popup label="Zavřít" color="primary" flat />
+                      <q-btn v-close-popup :label="t('common.close')" color="primary" flat />
                     </div>
                   </q-date>
                 </q-popup-proxy>
@@ -43,8 +43,8 @@
               unelevated
               size="sm"
               :options="[
-                { label: 'Čas od – do', value: 'range' },
-                { label: 'Počet hodin', value: 'manual' },
+                { label: t('hours.modeRange'), value: 'range' },
+                { label: t('hours.modeManual'), value: 'manual' },
               ]"
             />
           </div>
@@ -54,7 +54,7 @@
             <div class="col-6">
               <q-input
                 v-model="form.startTime"
-                label="Od"
+                :label="t('hours.from')"
                 outlined
                 dense
                 mask="##:##"
@@ -76,7 +76,7 @@
             <div class="col-6">
               <q-input
                 v-model="form.endTime"
-                label="Do"
+                :label="t('hours.to')"
                 outlined
                 dense
                 mask="##:##"
@@ -98,7 +98,7 @@
             <div v-if="computedHours > 0" class="col-12">
               <div class="computed-hours-chip">
                 <q-icon name="schedule" size="14px" />
-                Celkem: <strong>{{ formatHours(computedHours) }}</strong>
+                {{ t('hours.total') }}: <strong>{{ formatHours(computedHours) }}</strong>
               </div>
             </div>
           </div>
@@ -107,7 +107,7 @@
           <div v-else class="q-mb-sm">
             <q-input
               v-model.number="form.hoursManual"
-              label="Počet hodin *"
+              :label="t('hours.manual')"
               outlined
               dense
               type="number"
@@ -120,32 +120,36 @@
           <q-select
             v-model="form.workTypeId"
             :options="workTypeOptions"
-            label="Typ práce"
+            :label="t('hours.workType')"
             outlined
             dense
             emit-value
             map-options
             class="q-mb-sm"
-            :display-value="form.workTypeId ? nastaveniStore.getWorkTypeName(form.workTypeId) : 'Vyberte typ'"
+            :display-value="form.workTypeId ? nastaveniStore.getWorkTypeName(form.workTypeId) : t('hours.selectWorkType')"
           />
 
-          <!-- Spolupracovník -->
+          <!-- Pracovníci (výběr více – pro každého vznikne samostatný záznam) -->
           <q-select
-            v-model="form.collaboratorId"
+            v-model="form.collaboratorIds"
             :options="collaboratorOptions"
-            label="Pracovník"
+            :label="isEdit ? t('hours.worker') : t('hours.workers')"
             outlined
             dense
             emit-value
             map-options
-            class="q-mb-sm"
-            :display-value="form.collaboratorId ? nastaveniStore.getCollaboratorName(form.collaboratorId) : 'Vyberte pracovníka'"
+            :multiple="!isEdit"
+            :use-chips="!isEdit"
+            class="q-mb-xs"
           />
+          <div v-if="!isEdit" class="text-caption text-grey-6 q-mb-sm">
+            {{ t('hours.workersHint') }}
+          </div>
 
           <!-- Poznámka -->
           <q-input
             v-model="form.notes"
-            label="Poznámka k záznamu"
+            :label="t('hours.note')"
             outlined
             dense
             type="textarea"
@@ -158,11 +162,11 @@
       <q-separator />
 
       <div class="q-pa-md row gap-sm justify-end">
-        <q-btn flat label="Zrušit" @click="show = false" />
+        <q-btn flat :label="t('common.cancel')" @click="show = false" />
         <q-btn
           unelevated
           color="primary"
-          :label="isEdit ? 'Uložit' : 'Přidat'"
+          :label="isEdit ? t('common.save') : t('common.add')"
           :loading="saving"
           @click="save"
         />
@@ -178,6 +182,7 @@ import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
 import type { WorkEntry } from '../db/dexie'
 import { format } from 'date-fns'
+import { t } from '../i18n'
 
 const props = defineProps<{
   modelValue: boolean
@@ -211,13 +216,14 @@ const collaboratorOptions = computed(() =>
   nastaveniStore.collaborators.map((c) => ({ label: c.name, value: c.id })),
 )
 
+// V režimu přidání je collaboratorIds pole; v editaci jen jeden (q-select bez multiple → string)
 const defaultForm = () => ({
   date: format(new Date(), 'yyyy-MM-dd'),
   startTime: '08:00',
   endTime: '16:00',
   hoursManual: 8,
   workTypeId: nastaveniStore.workTypes[0]?.id ?? '',
-  collaboratorId: nastaveniStore.collaborators[0]?.id ?? '',
+  collaboratorIds: [] as string[] | string,
   notes: '',
 })
 
@@ -235,7 +241,7 @@ watch(
           endTime: props.entry.endTime ?? '16:00',
           hoursManual: props.entry.hours,
           workTypeId: props.entry.workTypeId,
-          collaboratorId: props.entry.collaboratorId,
+          collaboratorIds: props.entry.collaboratorId, // string v editaci
           notes: props.entry.notes,
         }
       } else {
@@ -257,39 +263,55 @@ const computedHours = computed(() => {
 function formatHours(h: number) {
   const hrs = Math.floor(h)
   const mins = Math.round((h - hrs) * 60)
-  return mins === 0 ? `${hrs} h` : `${hrs}:${String(mins).padStart(2, '0')} h`
+  return mins === 0 ? `${hrs} ${t('common.hoursShort')}` : `${hrs}:${String(mins).padStart(2, '0')} ${t('common.hoursShort')}`
 }
 
 async function save() {
   const hours = timeMode.value === 'range' ? computedHours.value : form.value.hoursManual
   if (!form.value.date || hours <= 0) {
-    $q.notify({ type: 'warning', message: 'Zadejte datum a platný čas / hodiny' })
+    $q.notify({ type: 'warning', message: t('hours.invalid') })
     return
   }
 
+  const base = {
+    projectId: props.projectId,
+    workTypeId: form.value.workTypeId,
+    date: form.value.date,
+    startTime: timeMode.value === 'range' ? form.value.startTime : undefined,
+    endTime: timeMode.value === 'range' ? form.value.endTime : undefined,
+    hours,
+    notes: form.value.notes,
+    isPaid: props.entry?.isPaid ?? false,
+  }
+
+  // Normalizace vybraných pracovníků na pole
+  const ids = Array.isArray(form.value.collaboratorIds)
+    ? form.value.collaboratorIds
+    : form.value.collaboratorIds
+      ? [form.value.collaboratorIds]
+      : []
+  const workerIds = ids.length ? ids : ['']
+
   saving.value = true
   try {
-    const data = {
-      projectId: props.projectId,
-      collaboratorId: form.value.collaboratorId,
-      workTypeId: form.value.workTypeId,
-      date: form.value.date,
-      startTime: timeMode.value === 'range' ? form.value.startTime : undefined,
-      endTime: timeMode.value === 'range' ? form.value.endTime : undefined,
-      hours,
-      notes: form.value.notes,
-      isPaid: props.entry?.isPaid ?? false,
-    }
-
     if (props.entry) {
-      await zaznamyStore.updateWorkEntry(props.entry.id, data)
+      await zaznamyStore.updateWorkEntry(props.entry.id, {
+        ...base,
+        collaboratorId: workerIds[0],
+      })
     } else {
-      await zaznamyStore.addWorkEntry(data)
+      // Pro každého vybraného pracovníka samostatný záznam
+      for (const cid of workerIds) {
+        await zaznamyStore.addWorkEntry({ ...base, collaboratorId: cid })
+      }
+      if (workerIds.length > 1) {
+        $q.notify({ type: 'positive', message: t('hours.savedMulti', { count: workerIds.length }) })
+      }
     }
     emit('saved')
   } catch (e) {
     console.error('Save failed:', e)
-    $q.notify({ type: 'negative', message: 'Chyba při ukládání: ' + (e as Error).message })
+    $q.notify({ type: 'negative', message: t('jobDialog.saveError', { msg: (e as Error).message }) })
   } finally {
     saving.value = false
   }
