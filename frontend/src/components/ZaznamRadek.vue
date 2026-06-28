@@ -1,5 +1,5 @@
 <template>
-  <div class="zaznam-radek" :class="{ 'is-paid': entry.isPaid }">
+  <div class="zaznam-radek" :class="{ 'is-paid': allPaid }">
     <q-checkbox
       v-model="isPaidLocal"
       color="positive"
@@ -10,19 +10,20 @@
 
     <div class="radek-content">
       <div class="radek-top">
-        <div class="radek-date">{{ formatDate(entry.date) }}</div>
-        <div class="radek-time" v-if="entry.startTime && entry.endTime">
-          {{ entry.startTime }} – {{ entry.endTime }}
+        <div class="radek-date">{{ formatDate(first.date) }}</div>
+        <div class="radek-time" v-if="first.startTime && first.endTime">
+          {{ first.startTime }} – {{ first.endTime }}
         </div>
         <q-space />
-        <div class="radek-hours" :class="{ 'paid-hours': entry.isPaid }">
-          {{ formatHours(entry.hours) }}
+        <div class="radek-hours" :class="{ 'paid-hours': allPaid }">
+          {{ formatHours(first.hours) }}
         </div>
       </div>
 
       <div class="radek-meta">
         <q-chip
-          v-if="collaboratorName"
+          v-for="name in workerNames"
+          :key="name"
           dense
           size="xs"
           outline
@@ -30,14 +31,14 @@
           class="chip-meta"
         >
           <q-icon name="person" size="11px" class="q-mr-xs" />
-          {{ collaboratorName }}
+          {{ name }}
         </q-chip>
         <q-chip
           v-if="workTypeName"
           dense
           size="xs"
           outline
-          :color="entry.isPaid ? 'positive' : 'primary'"
+          :color="allPaid ? 'positive' : 'primary'"
           class="chip-meta"
         >
           {{ workTypeName }}
@@ -45,7 +46,7 @@
         </q-chip>
       </div>
 
-      <div v-if="entry.notes" class="radek-notes">{{ entry.notes }}</div>
+      <div v-if="first.notes" class="radek-notes">{{ first.notes }}</div>
     </div>
 
     <q-btn
@@ -59,11 +60,11 @@
     >
       <q-menu>
         <q-list dense style="min-width: 130px">
-          <q-item clickable v-close-popup @click="$emit('edit', entry)">
+          <q-item clickable v-close-popup @click="$emit('edit', entries)">
             <q-item-section avatar><q-icon name="edit" size="16px" /></q-item-section>
             <q-item-section>{{ t('common.edit') }}</q-item-section>
           </q-item>
-          <q-item clickable v-close-popup @click="$emit('delete', entry)" class="text-negative">
+          <q-item clickable v-close-popup @click="$emit('delete', entries)" class="text-negative">
             <q-item-section avatar><q-icon name="delete" size="16px" color="negative" /></q-item-section>
             <q-item-section>{{ t('common.delete') }}</q-item-section>
           </q-item>
@@ -81,27 +82,33 @@ import type { WorkEntry } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
 import { t, dateFnsLocale } from '../i18n'
 
-const props = defineProps<{ entry: WorkEntry }>()
+const props = defineProps<{ entries: WorkEntry[] }>()
 defineEmits<{
-  edit: [entry: WorkEntry]
-  delete: [entry: WorkEntry]
+  edit: [entries: WorkEntry[]]
+  delete: [entries: WorkEntry[]]
 }>()
 
 const zaznamyStore = useZaznamyStore()
 const nastaveniStore = useNastaveniStore()
 
-const isPaidLocal = ref(props.entry.isPaid)
-watch(() => props.entry.isPaid, (v) => (isPaidLocal.value = v))
+const first = computed(() => props.entries[0])
+const allPaid = computed(() => props.entries.every((e) => e.isPaid))
 
-const collaboratorName = computed(() =>
-  props.entry.collaboratorId ? nastaveniStore.getCollaboratorName(props.entry.collaboratorId) : '',
+const isPaidLocal = ref(allPaid.value)
+watch(allPaid, (v) => (isPaidLocal.value = v))
+
+const workerNames = computed(() =>
+  props.entries
+    .map((e) => (e.collaboratorId ? nastaveniStore.getCollaboratorName(e.collaboratorId) : ''))
+    .filter((n): n is string => !!n),
 )
 const workTypeName = computed(() =>
-  props.entry.workTypeId ? nastaveniStore.getWorkTypeName(props.entry.workTypeId) : '',
+  first.value.workTypeId ? nastaveniStore.getWorkTypeName(first.value.workTypeId) : '',
 )
+// Výdělek za celou skupinu (všichni pracovníci dohromady)
 const earnings = computed(() => {
-  const rate = nastaveniStore.workTypeRates[props.entry.workTypeId] ?? 0
-  return props.entry.hours * rate
+  const rate = nastaveniStore.workTypeRates[first.value.workTypeId] ?? 0
+  return props.entries.reduce((s, e) => s + e.hours * rate, 0)
 })
 
 function formatDate(d: string) {
@@ -123,7 +130,7 @@ function formatPrice(p: number) {
 }
 
 async function togglePaid(val: boolean) {
-  await zaznamyStore.togglePaid(props.entry.id, val)
+  for (const e of props.entries) await zaznamyStore.togglePaid(e.id, val)
 }
 </script>
 

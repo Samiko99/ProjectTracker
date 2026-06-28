@@ -21,6 +21,7 @@
             class="q-mb-sm"
             mask="####-##-##"
             placeholder="YYYY-MM-DD"
+            inputmode="numeric"
           >
             <template #append>
               <q-icon name="event" class="cursor-pointer">
@@ -49,51 +50,25 @@
             />
           </div>
 
-          <!-- Čas od-do -->
+          <!-- Čas od-do (nativní time picker – na iPhonu kolečkový výběr) -->
           <div v-if="timeMode === 'range'" class="row q-col-gutter-sm q-mb-sm">
             <div class="col-6">
               <q-input
                 v-model="form.startTime"
+                type="time"
                 :label="t('hours.from')"
                 outlined
                 dense
-                mask="##:##"
-                placeholder="08:00"
-              >
-                <template #append>
-                  <q-icon name="schedule" class="cursor-pointer">
-                    <q-popup-proxy cover>
-                      <q-time v-model="form.startTime" format24h>
-                        <div class="row items-center justify-end">
-                          <q-btn v-close-popup label="OK" color="primary" flat />
-                        </div>
-                      </q-time>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
+              />
             </div>
             <div class="col-6">
               <q-input
                 v-model="form.endTime"
+                type="time"
                 :label="t('hours.to')"
                 outlined
                 dense
-                mask="##:##"
-                placeholder="16:00"
-              >
-                <template #append>
-                  <q-icon name="schedule" class="cursor-pointer">
-                    <q-popup-proxy cover>
-                      <q-time v-model="form.endTime" format24h>
-                        <div class="row items-center justify-end">
-                          <q-btn v-close-popup label="OK" color="primary" flat />
-                        </div>
-                      </q-time>
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
+              />
             </div>
             <div v-if="computedHours > 0" class="col-12">
               <div class="computed-hours-chip">
@@ -113,6 +88,7 @@
               type="number"
               min="0.5"
               step="0.5"
+              inputmode="decimal"
             />
           </div>
 
@@ -129,20 +105,48 @@
             :display-value="form.workTypeId ? nastaveniStore.getWorkTypeName(form.workTypeId) : t('hours.selectWorkType')"
           />
 
-          <!-- Pracovníci (výběr více – pro každého vznikne samostatný záznam) -->
-          <q-select
-            v-model="form.collaboratorIds"
-            :options="collaboratorOptions"
-            :label="isEdit ? t('hours.worker') : t('hours.workers')"
-            outlined
-            dense
-            emit-value
-            map-options
-            :multiple="!isEdit"
-            :use-chips="!isEdit"
-            class="q-mb-xs"
-          />
-          <div v-if="!isEdit" class="text-caption text-grey-6 q-mb-sm">
+          <!-- Pracovníci – jedno pole na pracovníka + tlačítko pro přidání dalšího -->
+          <div class="q-mb-xs">
+            <div
+              v-for="(slot, i) in workerSlots"
+              :key="i"
+              class="row items-center no-wrap q-gutter-x-xs q-mb-xs"
+            >
+              <q-select
+                v-model="workerSlots[i]"
+                :options="availableOptions(i)"
+                :label="t('hours.worker')"
+                outlined
+                dense
+                emit-value
+                map-options
+                clearable
+                class="col"
+                :display-value="workerSlots[i] ? nastaveniStore.getCollaboratorName(workerSlots[i]) : t('hours.selectWorker')"
+              />
+              <q-btn
+                v-if="workerSlots.length > 1"
+                flat
+                round
+                dense
+                icon="close"
+                color="grey-6"
+                size="sm"
+                @click="removeSlot(i)"
+              />
+            </div>
+            <q-btn
+              flat
+              dense
+              no-caps
+              icon="add"
+              color="primary"
+              :label="t('hours.addWorker')"
+              :disable="!canAddSlot"
+              @click="addSlot"
+            />
+          </div>
+          <div class="text-caption text-grey-6 q-mb-sm">
             {{ t('hours.workersHint') }}
           </div>
 
@@ -187,7 +191,7 @@ import { t } from '../i18n'
 const props = defineProps<{
   modelValue: boolean
   projectId: string
-  entry?: WorkEntry | null
+  entries?: WorkEntry[] | null
 }>()
 
 const emit = defineEmits<{
@@ -207,7 +211,7 @@ const show = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const isEdit = computed(() => !!props.entry)
+const isEdit = computed(() => !!props.entries && props.entries.length > 0)
 
 const workTypeOptions = computed(() =>
   nastaveniStore.workTypes.map((wt) => ({ label: wt.name, value: wt.id })),
@@ -216,36 +220,57 @@ const collaboratorOptions = computed(() =>
   nastaveniStore.collaborators.map((c) => ({ label: c.name, value: c.id })),
 )
 
-// V režimu přidání je collaboratorIds pole; v editaci jen jeden (q-select bez multiple → string)
 const defaultForm = () => ({
   date: format(new Date(), 'yyyy-MM-dd'),
   startTime: '08:00',
   endTime: '16:00',
   hoursManual: 8,
   workTypeId: nastaveniStore.workTypes[0]?.id ?? '',
-  collaboratorIds: [] as string[] | string,
   notes: '',
 })
 
 const form = ref(defaultForm())
+// Pole pracovníků – jedno políčko na pracovníka (prázdné '' = nevybráno)
+const workerSlots = ref<string[]>([''])
+
+// Možnosti pro dané políčko bez pracovníků zvolených v ostatních políčkách
+function availableOptions(i: number) {
+  const others = workerSlots.value.filter((id, idx) => idx !== i && !!id)
+  return collaboratorOptions.value.filter((o) => !others.includes(o.value))
+}
+const canAddSlot = computed(() => {
+  const chosen = workerSlots.value.filter(Boolean)
+  return chosen.length < nastaveniStore.collaborators.length && !workerSlots.value.includes('')
+})
+function addSlot() {
+  workerSlots.value.push('')
+}
+function removeSlot(i: number) {
+  workerSlots.value.splice(i, 1)
+  if (!workerSlots.value.length) workerSlots.value = ['']
+}
 
 watch(
   () => props.modelValue,
   (open) => {
     if (open) {
-      if (props.entry) {
-        timeMode.value = props.entry.startTime ? 'range' : 'manual'
+      const g = props.entries
+      if (g && g.length) {
+        const e0 = g[0]
+        timeMode.value = e0.startTime ? 'range' : 'manual'
         form.value = {
-          date: props.entry.date,
-          startTime: props.entry.startTime ?? '08:00',
-          endTime: props.entry.endTime ?? '16:00',
-          hoursManual: props.entry.hours,
-          workTypeId: props.entry.workTypeId,
-          collaboratorIds: props.entry.collaboratorId, // string v editaci
-          notes: props.entry.notes,
+          date: e0.date,
+          startTime: e0.startTime ?? '08:00',
+          endTime: e0.endTime ?? '16:00',
+          hoursManual: e0.hours,
+          workTypeId: e0.workTypeId,
+          notes: e0.notes,
         }
+        const ids = g.map((e) => e.collaboratorId).filter(Boolean)
+        workerSlots.value = ids.length ? ids : ['']
       } else {
         form.value = defaultForm()
+        workerSlots.value = ['']
         timeMode.value = 'range'
       }
     }
@@ -281,28 +306,33 @@ async function save() {
     endTime: timeMode.value === 'range' ? form.value.endTime : undefined,
     hours,
     notes: form.value.notes,
-    isPaid: props.entry?.isPaid ?? false,
   }
 
-  // Normalizace vybraných pracovníků na pole
-  const ids = Array.isArray(form.value.collaboratorIds)
-    ? form.value.collaboratorIds
-    : form.value.collaboratorIds
-      ? [form.value.collaboratorIds]
-      : []
-  const workerIds = ids.length ? ids : ['']
+  // Vybraní pracovníci (unikátní, neprázdní)
+  const chosen = Array.from(new Set(workerSlots.value.filter(Boolean)))
+  const workerIds = chosen.length ? chosen : ['']
+  const groupPaid = props.entries?.[0]?.isPaid ?? false
 
   saving.value = true
   try {
-    if (props.entry) {
-      await zaznamyStore.updateWorkEntry(props.entry.id, {
-        ...base,
-        collaboratorId: workerIds[0],
-      })
+    if (props.entries && props.entries.length) {
+      // Editace skupiny: sladit existující záznamy s vybranými pracovníky
+      const remaining = new Set(workerIds)
+      for (const e of props.entries) {
+        if (remaining.has(e.collaboratorId)) {
+          await zaznamyStore.updateWorkEntry(e.id, { ...base, collaboratorId: e.collaboratorId })
+          remaining.delete(e.collaboratorId)
+        } else {
+          await zaznamyStore.deleteWorkEntry(e.id)
+        }
+      }
+      for (const cid of remaining) {
+        await zaznamyStore.addWorkEntry({ ...base, collaboratorId: cid, isPaid: groupPaid })
+      }
     } else {
       // Pro každého vybraného pracovníka samostatný záznam
       for (const cid of workerIds) {
-        await zaznamyStore.addWorkEntry({ ...base, collaboratorId: cid })
+        await zaznamyStore.addWorkEntry({ ...base, collaboratorId: cid, isPaid: false })
       }
       if (workerIds.length > 1) {
         $q.notify({ type: 'positive', message: t('hours.savedMulti', { count: workerIds.length }) })

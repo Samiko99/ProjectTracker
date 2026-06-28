@@ -12,29 +12,30 @@
     "lint": "eslint --ext .js,.ts,.vue ."
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.14",
+    "@fullcalendar/daygrid": "^6.1.14",
+    "@fullcalendar/interaction": "^6.1.14",
+    "@fullcalendar/list": "^6.1.14",
+    "@fullcalendar/timegrid": "^6.1.14",
+    "@fullcalendar/vue3": "^6.1.14",
     "@quasar/extras": "^1.16.12",
+    "date-fns": "^3.6.0",
+    "dexie": "^3.2.7",
+    "pinia": "^2.1.7",
     "quasar": "^2.16.5",
     "vue": "^3.4.21",
     "vue-router": "^4.3.2",
-    "pinia": "^2.1.7",
-    "dexie": "^3.2.7",
-    "@fullcalendar/core": "^6.1.14",
-    "@fullcalendar/vue3": "^6.1.14",
-    "@fullcalendar/daygrid": "^6.1.14",
-    "@fullcalendar/timegrid": "^6.1.14",
-    "@fullcalendar/interaction": "^6.1.14",
-    "@fullcalendar/list": "^6.1.14",
-    "date-fns": "^3.6.0"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@quasar/app-vite": "^1.9.2",
     "@types/node": "^20.12.7",
-    "typescript": "^5.4.5",
-    "eslint": "^8.57.0",
-    "eslint-plugin-vue": "^9.25.0",
     "@typescript-eslint/eslint-plugin": "^7.7.1",
     "@typescript-eslint/parser": "^7.7.1",
-    "eslint-config-prettier": "^9.1.0"
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.25.0",
+    "typescript": "^5.4.5"
   },
   "engines": {
     "node": "^20 || ^18 || ^16",

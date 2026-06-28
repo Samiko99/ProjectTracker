@@ -16,6 +16,10 @@
                 <q-item-section avatar><q-icon name="done_all" size="18px" color="positive" /></q-item-section>
                 <q-item-section>{{ t('jobMenu.markAllPaid') }}</q-item-section>
               </q-item>
+              <q-item clickable v-close-popup @click="exportExcel">
+                <q-item-section avatar><q-icon name="grid_on" size="18px" color="green-8" /></q-item-section>
+                <q-item-section>{{ t('jobMenu.exportExcel') }}</q-item-section>
+              </q-item>
               <q-separator spaced />
               <q-item v-if="!project?.closedAt" clickable v-close-popup @click="closeJob">
                 <q-item-section avatar><q-icon name="check_circle" size="18px" color="primary" /></q-item-section>
@@ -33,6 +37,7 @@
         <q-icon name="location_on" size="13px" />
         {{ project.address }}
       </div>
+      <div v-if="project?.notes" class="detail-note">{{ project.notes }}</div>
     </div>
 
     <!-- Souhrn hodin -->
@@ -51,7 +56,7 @@
           flat
           no-caps
           :options="[
-            { label: `${t('detail.tabHours')} (${workEntries.length})`, value: 'hodiny' },
+            { label: `${t('detail.tabHours')} (${groupedWorkEntries.length})`, value: 'hodiny' },
             { label: `${t('detail.tabMaterial')} (${materialEntries.length})`, value: 'material' },
           ]"
         />
@@ -65,11 +70,11 @@
         </div>
         <div v-else>
           <zaznam-radek
-            v-for="entry in workEntries"
-            :key="entry.id"
-            :entry="entry"
-            @edit="openEditHodiny(entry)"
-            @delete="confirmDeleteEntry(entry)"
+            v-for="group in groupedWorkEntries"
+            :key="group[0].id"
+            :entries="group"
+            @edit="openEditHodiny(group)"
+            @delete="confirmDeleteEntry(group)"
           />
         </div>
       </div>
@@ -107,7 +112,6 @@
           icon="schedule"
           :label="t('detail.addHours')"
           label-position="left"
-          external-label
           @click="openAddHodiny"
         />
         <q-fab-action
@@ -115,7 +119,6 @@
           icon="inventory_2"
           :label="t('detail.addMaterial')"
           label-position="left"
-          external-label
           @click="openAddMaterial"
         />
       </q-fab>
@@ -131,7 +134,7 @@
     <pridat-hodiny-dialog
       v-model="showHodinyDialog"
       :project-id="projectId"
-      :entry="editingEntry"
+      :entries="editingEntries"
       @saved="onHodinySaved"
     />
 
@@ -159,6 +162,7 @@ import PridatMaterialDialog from '../components/PridatMaterialDialog.vue'
 import type { WorkEntry, MaterialEntry } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
 import { t, dateFnsLocale } from '../i18n'
+import { exportJobToExcel } from '../utils/export'
 
 // Inline material row component
 const MaterialRadek = defineComponent({
@@ -211,11 +215,27 @@ const router = useRouter()
 const $q = useQuasar()
 const stavbyStore = useStavbyStore()
 const zaznamyStore = useZaznamyStore()
+const nastaveniStore = useNastaveniStore()
 
 const projectId = route.params.id as string
 const project = computed(() => stavbyStore.getProjectById(projectId))
-const workEntries = computed(() => zaznamyStore.workEntries)
+const workEntries = computed(() =>
+  zaznamyStore.workEntries.filter((e) => e.projectId === projectId),
+)
 const materialEntries = computed(() => zaznamyStore.materialEntries)
+
+// Sloučení záznamů stejné práce (stejný den/čas/hodiny/poznámka/typ) více
+// pracovníků do jednoho řádku — jen se zobrazí všichni pracovníci.
+const groupedWorkEntries = computed(() => {
+  const groups = new Map<string, WorkEntry[]>()
+  for (const e of workEntries.value) {
+    const key = [e.date, e.startTime || '', e.endTime || '', e.hours, e.notes || '', e.workTypeId || ''].join('|')
+    const arr = groups.get(key)
+    if (arr) arr.push(e)
+    else groups.set(key, [e])
+  }
+  return Array.from(groups.values())
+})
 
 const activeSection = ref<'hodiny' | 'material'>('hodiny')
 const fabOpen = ref(false)
@@ -223,7 +243,7 @@ const fabOpen = ref(false)
 const showEditProject = ref(false)
 const showHodinyDialog = ref(false)
 const showMaterialDialog = ref(false)
-const editingEntry = ref<WorkEntry | null>(null)
+const editingEntries = ref<WorkEntry[] | null>(null)
 const editingMaterial = ref<MaterialEntry | null>(null)
 
 onMounted(async () => {
@@ -265,14 +285,26 @@ async function reopenJob() {
   $q.notify({ type: 'positive', message: t('jobs.reopened') })
 }
 
+function exportExcel() {
+  if (!project.value) return
+  exportJobToExcel({
+    project: project.value,
+    workEntries: workEntries.value,
+    materialEntries: materialEntries.value,
+    collabName: (id) => nastaveniStore.getCollaboratorName(id),
+    workTypeName: (id) => nastaveniStore.getWorkTypeName(id),
+  })
+  $q.notify({ type: 'positive', message: t('export.done') })
+}
+
 function openAddHodiny() {
   fabOpen.value = false
-  editingEntry.value = null
+  editingEntries.value = null
   showHodinyDialog.value = true
 }
 
-function openEditHodiny(entry: WorkEntry) {
-  editingEntry.value = entry
+function openEditHodiny(group: WorkEntry[]) {
+  editingEntries.value = group
   showHodinyDialog.value = true
 }
 
@@ -294,7 +326,7 @@ function onProjectSaved() {
 
 function onHodinySaved() {
   showHodinyDialog.value = false
-  editingEntry.value = null
+  editingEntries.value = null
 }
 
 function onMaterialSaved() {
@@ -302,14 +334,14 @@ function onMaterialSaved() {
   editingMaterial.value = null
 }
 
-async function confirmDeleteEntry(entry: WorkEntry) {
+async function confirmDeleteEntry(group: WorkEntry[]) {
   $q.dialog({
     title: t('detail.deleteEntryTitle'),
     message: t('detail.deleteEntryMsg'),
     cancel: { label: t('common.cancel'), flat: true },
     ok: { label: t('common.delete'), color: 'negative', unelevated: true },
   }).onOk(async () => {
-    await zaznamyStore.deleteWorkEntry(entry.id)
+    for (const e of group) await zaznamyStore.deleteWorkEntry(e.id)
   })
 }
 
@@ -345,11 +377,11 @@ async function confirmDeleteMaterial(entry: MaterialEntry) {
 .detail-title {
   flex: 1;
   min-width: 0;
-  font-size: 25px;
+  font-size: 22px;
   font-weight: 700;
   color: #1A1A1A;
   margin: 0;
-  line-height: 1.15;
+  line-height: 1.2;
   word-break: break-word;
 }
 
@@ -360,6 +392,13 @@ async function confirmDeleteMaterial(entry: MaterialEntry) {
   align-items: center;
   gap: 3px;
   margin: 2px 0 0 12px;
+}
+
+.detail-note {
+  font-size: 13px;
+  color: #616161;
+  margin: 3px 0 0 12px;
+  white-space: pre-wrap;
 }
 
 .section-tabs {
