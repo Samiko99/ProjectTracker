@@ -69,6 +69,7 @@ model WorkType {
   userId     String
   name       String
   hourlyRate Float     @default(0)
+  currency   String    @default("Kč")
   createdAt  DateTime
   updatedAt  DateTime
   deletedAt  DateTime?

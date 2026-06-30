@@ -50,24 +50,54 @@
             />
           </div>
 
-          <!-- Čas od-do (nativní time picker – na iPhonu kolečkový výběr) -->
+          <!-- Čas od-do: klik do pole = číselná klávesnice, klik na ikonu = iOS budík -->
           <div v-if="timeMode === 'range'" class="row q-col-gutter-sm q-mb-sm">
             <div class="col-6">
               <q-input
                 v-model="form.startTime"
-                type="time"
                 :label="t('hours.from')"
                 outlined
                 dense
+                mask="##:##"
+                inputmode="numeric"
+                placeholder="08:00"
+              >
+                <template #append>
+                  <q-icon name="schedule" class="cursor-pointer" @click="openTimePicker('start')" />
+                </template>
+              </q-input>
+              <input
+                ref="startPicker"
+                type="time"
+                class="native-time-proxy"
+                tabindex="-1"
+                aria-hidden="true"
+                :value="form.startTime"
+                @change="onTimePicker('start', $event)"
               />
             </div>
             <div class="col-6">
               <q-input
                 v-model="form.endTime"
-                type="time"
                 :label="t('hours.to')"
                 outlined
                 dense
+                mask="##:##"
+                inputmode="numeric"
+                placeholder="16:00"
+              >
+                <template #append>
+                  <q-icon name="schedule" class="cursor-pointer" @click="openTimePicker('end')" />
+                </template>
+              </q-input>
+              <input
+                ref="endPicker"
+                type="time"
+                class="native-time-proxy"
+                tabindex="-1"
+                aria-hidden="true"
+                :value="form.endTime"
+                @change="onTimePicker('end', $event)"
               />
             </div>
             <div v-if="computedHours > 0" class="col-12">
@@ -205,6 +235,27 @@ const nastaveniStore = useNastaveniStore()
 
 const saving = ref(false)
 const timeMode = ref<'range' | 'manual'>('range')
+
+// Skryté nativní time inputy – ikona hodin přes ně otevře iOS budík
+const startPicker = ref<HTMLInputElement | null>(null)
+const endPicker = ref<HTMLInputElement | null>(null)
+function openTimePicker(which: 'start' | 'end') {
+  const el = which === 'start' ? startPicker.value : endPicker.value
+  if (!el) return
+  try {
+    const anyEl = el as HTMLInputElement & { showPicker?: () => void }
+    if (typeof anyEl.showPicker === 'function') anyEl.showPicker()
+    else el.click()
+  } catch {
+    el.click()
+  }
+}
+function onTimePicker(which: 'start' | 'end', ev: Event) {
+  const v = (ev.target as HTMLInputElement).value
+  if (!v) return
+  if (which === 'start') form.value.startTime = v
+  else form.value.endTime = v
+}
 
 const show = computed({
   get: () => props.modelValue,
@@ -364,5 +415,17 @@ async function save() {
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 13px;
+}
+
+/* Skrytý nativní time input – jen pro vyvolání iOS budíku přes ikonu */
+.native-time-proxy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
 }
 </style>

@@ -3,9 +3,16 @@
     <!-- Header -->
     <div class="detail-header" :style="{ borderBottom: `3px solid ${project?.color ?? '#E65100'}` }">
       <div class="header-row">
-        <q-btn flat round dense icon="arrow_back" color="grey-8" @click="router.back()" />
-        <h1 class="detail-title">{{ project?.name ?? '...' }}</h1>
-        <q-btn flat round dense icon="more_vert" color="grey-8">
+        <q-btn flat round dense icon="arrow_back" color="grey-8" class="header-back" @click="router.back()" />
+        <div class="header-main">
+          <h1 class="detail-title">{{ project?.name ?? '...' }}</h1>
+          <div v-if="project?.address" class="detail-address">
+            <q-icon name="location_on" size="13px" />
+            {{ project.address }}
+          </div>
+          <div v-if="project?.notes" class="detail-note">{{ project.notes }}</div>
+        </div>
+        <q-btn flat round dense icon="more_vert" color="grey-8" class="header-kebab">
           <q-menu anchor="bottom right" self="top right">
             <q-list dense style="min-width: 220px">
               <q-item clickable v-close-popup @click="editProject">
@@ -33,11 +40,6 @@
           </q-menu>
         </q-btn>
       </div>
-      <div v-if="project?.address" class="detail-address">
-        <q-icon name="location_on" size="13px" />
-        {{ project.address }}
-      </div>
-      <div v-if="project?.notes" class="detail-note">{{ project.notes }}</div>
     </div>
 
     <!-- Souhrn hodin -->
@@ -98,7 +100,7 @@
     </div>
 
     <!-- FAB – přidat záznam -->
-    <q-page-sticky position="bottom-right" :offset="[16, 88]">
+    <q-page-sticky position="bottom-right" :offset="[16, 36]">
       <q-fab
         v-model="fabOpen"
         color="primary"
@@ -365,19 +367,29 @@ async function confirmDeleteMaterial(entry: MaterialEntry) {
 
 .detail-header {
   background: white;
-  padding: 6px 8px 14px;
+  padding: 8px 10px 12px;
 }
 
 .header-row {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.header-back,
+.header-kebab {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.header-main {
+  flex: 1;
+  min-width: 0;
+  padding-top: 3px;
 }
 
 .detail-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   color: #1A1A1A;
   margin: 0;
@@ -391,13 +403,13 @@ async function confirmDeleteMaterial(entry: MaterialEntry) {
   display: flex;
   align-items: center;
   gap: 3px;
-  margin: 2px 0 0 12px;
+  margin-top: 3px;
 }
 
 .detail-note {
   font-size: 13px;
   color: #616161;
-  margin: 3px 0 0 12px;
+  margin-top: 3px;
   white-space: pre-wrap;
 }
 

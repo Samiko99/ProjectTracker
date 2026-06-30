@@ -16,6 +16,7 @@ export interface WorkType {
   id: string
   name: string
   hourlyRate: number
+  currency?: string // měna sazby (výchozí Kč)
   createdAt: string
   updatedAt: string
   deletedAt?: string

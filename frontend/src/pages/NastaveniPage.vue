@@ -169,7 +169,7 @@
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ wt.name }}</q-item-label>
-              <q-item-label caption>{{ formatPrice(wt.hourlyRate) }}/{{ t('common.hoursShort') }}</q-item-label>
+              <q-item-label caption>{{ formatMoney(wt.hourlyRate, wt.currency) }}/{{ t('common.hoursShort') }}</q-item-label>
             </q-item-section>
             <q-item-section side>
               <div class="row gap-xs">
@@ -256,15 +256,29 @@
             class="q-mb-sm"
             :placeholder="t('settings.workTypeNameHint')"
           />
-          <q-input
-            v-model.number="workTypeForm.hourlyRate"
-            :label="t('settings.hourlyRate')"
-            outlined
-            dense
-            type="number"
-            min="0"
-            :suffix="t('settings.perHour')"
-          />
+          <div class="row q-col-gutter-sm">
+            <div class="col-7">
+              <q-input
+                v-model.number="workTypeForm.hourlyRate"
+                :label="t('settings.hourlyRate')"
+                outlined
+                dense
+                type="number"
+                min="0"
+                inputmode="decimal"
+                :suffix="`${workTypeForm.currency || 'Kč'}/${t('common.hoursShort')}`"
+              />
+            </div>
+            <div class="col-5">
+              <q-input
+                v-model="workTypeForm.currency"
+                :label="t('settings.currency')"
+                outlined
+                dense
+                :hint="t('settings.currencyHint')"
+              />
+            </div>
+          </div>
         </div>
         <q-separator />
         <div class="q-pa-md row gap-sm justify-end">
@@ -339,6 +353,7 @@ import PrihlaseniDialog from '../components/PrihlaseniDialog.vue'
 import type { Collaborator, WorkType } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
 import { t, locale, setLocale, dateFnsLocale, type Locale } from '../i18n'
+import { formatMoney } from '../utils/money'
 
 const $q = useQuasar()
 const nastaveniStore = useNastaveniStore()
@@ -453,7 +468,7 @@ const collabForm = ref({ name: '' })
 // Work types
 const showWorkTypeDialog = ref(false)
 const editingWorkType = ref<WorkType | null>(null)
-const workTypeForm = ref({ name: '', hourlyRate: 0 })
+const workTypeForm = ref({ name: '', hourlyRate: 0, currency: 'Kč' })
 
 onMounted(() => {
   nastaveniStore.loadSettings()
@@ -501,13 +516,13 @@ async function deleteCollab(collab: Collaborator) {
 
 function openAddWorkType() {
   editingWorkType.value = null
-  workTypeForm.value = { name: '', hourlyRate: 0 }
+  workTypeForm.value = { name: '', hourlyRate: 0, currency: nastaveniStore.primaryCurrency }
   showWorkTypeDialog.value = true
 }
 
 function editWorkType(wt: WorkType) {
   editingWorkType.value = wt
-  workTypeForm.value = { name: wt.name, hourlyRate: wt.hourlyRate }
+  workTypeForm.value = { name: wt.name, hourlyRate: wt.hourlyRate, currency: wt.currency || 'Kč' }
   showWorkTypeDialog.value = true
 }
 
@@ -539,9 +554,6 @@ async function deleteWorkType(wt: WorkType) {
   })
 }
 
-function formatPrice(p: number) {
-  return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 }).format(p)
-}
 </script>
 
 <style scoped lang="scss">

@@ -2,7 +2,7 @@
   <q-page class="stavby-page">
     <div class="page-header">
       <h1 class="page-title">{{ t('jobs.title') }}</h1>
-      <q-btn round unelevated color="primary" icon="add" size="md" @click="openAddDialog" />
+      <q-btn round unelevated color="primary" icon="add" size="sm" @click="openAddDialog" />
     </div>
 
     <div v-if="stavbyStore.loading" class="flex flex-center q-pa-xl">

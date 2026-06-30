@@ -81,6 +81,7 @@ import { useNastaveniStore } from '../stores/nastaveni'
 import type { WorkEntry } from '../db/dexie'
 import { format, parseISO } from 'date-fns'
 import { t, dateFnsLocale } from '../i18n'
+import { formatMoney } from '../utils/money'
 
 const props = defineProps<{ entries: WorkEntry[] }>()
 defineEmits<{
@@ -126,7 +127,7 @@ function formatHours(h: number) {
 }
 
 function formatPrice(p: number) {
-  return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 }).format(p)
+  return formatMoney(p, nastaveniStore.getWorkTypeCurrency(first.value.workTypeId))
 }
 
 async function togglePaid(val: boolean) {

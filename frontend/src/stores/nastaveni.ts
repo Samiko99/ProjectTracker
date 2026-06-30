@@ -12,6 +12,15 @@ export const useNastaveniStore = defineStore('nastaveni', () => {
     Object.fromEntries(workTypes.value.map((wt) => [wt.id, wt.hourlyRate])),
   )
 
+  // Měna konkrétního typu práce (výchozí Kč)
+  function getWorkTypeCurrency(id: string) {
+    return workTypes.value.find((w) => w.id === id)?.currency || 'Kč'
+  }
+  // Hlavní měna aplikace (z prvního typu práce, jinak Kč) – pro souhrny
+  const primaryCurrency = computed(
+    () => workTypes.value.find((w) => w.currency)?.currency || 'Kč',
+  )
+
   async function loadSettings() {
     loading.value = true
     try {
@@ -94,6 +103,7 @@ export const useNastaveniStore = defineStore('nastaveni', () => {
     workTypes,
     collaborators,
     workTypeRates,
+    primaryCurrency,
     loading,
     loadSettings,
     addWorkType,
@@ -104,5 +114,6 @@ export const useNastaveniStore = defineStore('nastaveni', () => {
     deleteCollaborator,
     getCollaboratorName,
     getWorkTypeName,
+    getWorkTypeCurrency,
   }
 })

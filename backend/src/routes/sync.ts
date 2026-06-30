@@ -92,6 +92,7 @@ syncRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   await pushModel(prisma.workType, changes.workTypes as never[], userId, (r) => ({
     name: (r as never as { name: string }).name,
     hourlyRate: (r as never as { hourlyRate?: number }).hourlyRate ?? 0,
+    currency: (r as never as { currency?: string }).currency ?? 'Kč',
     createdAt: new Date((r as IncomingBase).createdAt),
     updatedAt: new Date((r as IncomingBase).updatedAt),
     deletedAt: toDate((r as IncomingBase).deletedAt),

@@ -194,7 +194,7 @@ onMounted(async () => {
 .page-header {
   flex-wrap: wrap;
   gap: 8px;
-  padding-bottom: 12px;
+  padding-bottom: 7px;
 }
 
 .view-toggle {

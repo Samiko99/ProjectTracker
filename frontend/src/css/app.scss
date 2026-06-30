@@ -30,7 +30,8 @@ html, body {
 // Page header
 .page-header {
   background: white;
-  padding: 16px 16px 12px;
+  padding: 4px 16px 4px;
+  min-height: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -40,7 +41,7 @@ html, body {
   border-bottom: 1px solid #F0F0F0;
 
   .page-title {
-    font-size: 22px;
+    font-size: 19px;
     font-weight: 700;
     color: #1A1A1A;
     margin: 0;

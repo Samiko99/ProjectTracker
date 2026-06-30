@@ -46,6 +46,7 @@ import { computed } from 'vue'
 import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
 import { t } from '../i18n'
+import { formatMoney } from '../utils/money'
 
 const props = defineProps<{
   projectId: string
@@ -90,12 +91,16 @@ function formatHours(h: number) {
   return mins === 0 ? `${hrs} h` : `${hrs}:${String(mins).padStart(2, '0')} h`
 }
 
+// Měna projektu = z typů práce použitých v záznamech, jinak hlavní měna
+const currency = computed(() => {
+  for (const e of entries.value) {
+    if (e.workTypeId) return nastaveniStore.getWorkTypeCurrency(e.workTypeId)
+  }
+  return nastaveniStore.primaryCurrency
+})
+
 function formatPrice(p: number) {
-  return new Intl.NumberFormat('cs-CZ', {
-    style: 'currency',
-    currency: 'CZK',
-    maximumFractionDigits: 0,
-  }).format(p)
+  return formatMoney(p, currency.value)
 }
 </script>
 
