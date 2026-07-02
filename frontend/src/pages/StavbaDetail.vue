@@ -150,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, defineComponent, h } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useStavbyStore } from '../stores/stavby'
@@ -158,59 +158,13 @@ import { useZaznamyStore } from '../stores/zaznamy'
 import { useNastaveniStore } from '../stores/nastaveni'
 import HodinySouhrn from '../components/HodinySouhrn.vue'
 import ZaznamRadek from '../components/ZaznamRadek.vue'
+import MaterialRadek from '../components/MaterialRadek.vue'
 import PridatStavbuDialog from '../components/PridatStavbuDialog.vue'
 import PridatHodinyDialog from '../components/PridatHodinyDialog.vue'
 import PridatMaterialDialog from '../components/PridatMaterialDialog.vue'
 import type { WorkEntry, MaterialEntry } from '../db/dexie'
-import { format, parseISO } from 'date-fns'
-import { t, dateFnsLocale } from '../i18n'
+import { t } from '../i18n'
 import { exportJobToExcel } from '../utils/export'
-
-// Inline material row component
-const MaterialRadek = defineComponent({
-  props: {
-    entry: { type: Object as () => MaterialEntry, required: true },
-  },
-  emits: ['edit', 'delete'],
-  setup(props, { emit }) {
-    const nastaveniStore = useNastaveniStore()
-    const formatDate = (d: string) => {
-      try { return format(parseISO(d), 'd. M. yyyy', { locale: dateFnsLocale() }) } catch { return d }
-    }
-    const formatPrice = (p: number) =>
-      new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 }).format(p)
-    return () =>
-      h('div', { class: 'material-radek' }, [
-        h('div', { class: 'mat-icon-wrap' }, [h('q-icon', { name: 'inventory_2', color: 'secondary', size: '18px' })]),
-        h('div', { class: 'mat-content' }, [
-          h('div', { class: 'mat-top' }, [
-            h('span', { class: 'mat-date' }, formatDate(props.entry.date)),
-            h('q-space'),
-            props.entry.amount > 0 ? h('span', { class: 'mat-amount' }, formatPrice(props.entry.amount)) : null,
-          ]),
-          h('div', { class: 'mat-desc' }, props.entry.description),
-          props.entry.paidById
-            ? h('div', { class: 'mat-paid-by' }, t('detail.paidBy', { name: nastaveniStore.getCollaboratorName(props.entry.paidById) }))
-            : null,
-          props.entry.notes ? h('div', { class: 'mat-notes' }, props.entry.notes) : null,
-        ]),
-        h('q-btn', { flat: true, round: true, dense: true, icon: 'more_vert', color: 'grey-4', size: 'xs' }, {
-          default: () => h('q-menu', {}, {
-            default: () => h('q-list', { dense: true, style: 'min-width: 130px' }, [
-              h('q-item', { clickable: true, 'v-close-popup': true, onClick: () => emit('edit', props.entry) }, [
-                h('q-item-section', { avatar: true }, [h('q-icon', { name: 'edit', size: '16px' })]),
-                h('q-item-section', {}, t('common.edit')),
-              ]),
-              h('q-item', { clickable: true, 'v-close-popup': true, class: 'text-negative', onClick: () => emit('delete', props.entry) }, [
-                h('q-item-section', { avatar: true }, [h('q-icon', { name: 'delete', size: '16px', color: 'negative' })]),
-                h('q-item-section', {}, t('common.delete')),
-              ]),
-            ]),
-          }),
-        }),
-      ])
-  },
-})
 
 const route = useRoute()
 const router = useRouter()
@@ -219,12 +173,17 @@ const stavbyStore = useStavbyStore()
 const zaznamyStore = useZaznamyStore()
 const nastaveniStore = useNastaveniStore()
 
-const projectId = route.params.id as string
-const project = computed(() => stavbyStore.getProjectById(projectId))
+// Reaktivní — Vue Router při přechodu mezi detaily znovu použije komponentu
+const projectId = computed(() => route.params.id as string)
+const project = computed(() => stavbyStore.getProjectById(projectId.value))
 const workEntries = computed(() =>
-  zaznamyStore.workEntries.filter((e) => e.projectId === projectId),
+  zaznamyStore.workEntries.filter((e) => e.projectId === projectId.value),
 )
-const materialEntries = computed(() => zaznamyStore.materialEntries)
+// Filtr podle zakázky — store může obsahovat záznamy všech zakázek
+// (např. po synchronizaci nebo návratu z kalendáře)
+const materialEntries = computed(() =>
+  zaznamyStore.materialEntries.filter((e) => e.projectId === projectId.value),
+)
 
 // Sloučení záznamů stejné práce (stejný den/čas/hodiny/poznámka/typ) více
 // pracovníků do jednoho řádku — jen se zobrazí všichni pracovníci.
@@ -250,7 +209,14 @@ const editingMaterial = ref<MaterialEntry | null>(null)
 
 onMounted(async () => {
   await stavbyStore.loadProjects()
-  await zaznamyStore.loadEntriesForProject(projectId)
+  await zaznamyStore.loadEntriesForProject(projectId.value)
+})
+
+// Přechod na jinou zakázku bez remountu komponenty
+watch(projectId, async (id, oldId) => {
+  if (id && id !== oldId) {
+    await zaznamyStore.loadEntriesForProject(id)
+  }
 })
 
 function editProject() {
@@ -264,7 +230,7 @@ function markAllPaid() {
     cancel: { flat: true, label: t('common.cancel') },
     ok: { color: 'positive', unelevated: true, label: t('common.save') },
   }).onOk(async () => {
-    await zaznamyStore.markAllPaidForProject(projectId)
+    await zaznamyStore.markAllPaidForProject(projectId.value)
     $q.notify({ type: 'positive', message: t('jobs.allMarkedPaid') })
   })
 }
@@ -276,14 +242,14 @@ function closeJob() {
     cancel: { flat: true, label: t('common.cancel') },
     ok: { color: 'primary', unelevated: true, label: t('jobMenu.close') },
   }).onOk(async () => {
-    await stavbyStore.closeProject(projectId)
+    await stavbyStore.closeProject(projectId.value)
     $q.notify({ type: 'positive', message: t('jobs.closed') })
     router.back()
   })
 }
 
 async function reopenJob() {
-  await stavbyStore.reopenProject(projectId)
+  await stavbyStore.reopenProject(projectId.value)
   $q.notify({ type: 'positive', message: t('jobs.reopened') })
 }
 
@@ -336,18 +302,18 @@ function onMaterialSaved() {
   editingMaterial.value = null
 }
 
-async function confirmDeleteEntry(group: WorkEntry[]) {
+function confirmDeleteEntry(group: WorkEntry[]) {
   $q.dialog({
     title: t('detail.deleteEntryTitle'),
     message: t('detail.deleteEntryMsg'),
     cancel: { label: t('common.cancel'), flat: true },
     ok: { label: t('common.delete'), color: 'negative', unelevated: true },
   }).onOk(async () => {
-    for (const e of group) await zaznamyStore.deleteWorkEntry(e.id)
+    await zaznamyStore.deleteWorkEntries(group.map((e) => e.id))
   })
 }
 
-async function confirmDeleteMaterial(entry: MaterialEntry) {
+function confirmDeleteMaterial(entry: MaterialEntry) {
   $q.dialog({
     title: t('detail.deleteEntryTitle'),
     message: t('detail.deleteEntryMsg'),
@@ -415,72 +381,5 @@ async function confirmDeleteMaterial(entry: MaterialEntry) {
 
 .section-tabs {
   margin-bottom: 8px;
-}
-</style>
-
-<style lang="scss">
-/* Global styles for inline MaterialRadek */
-.material-radek {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 0;
-
-  & + .material-radek {
-    border-top: 1px solid #F5F5F5;
-  }
-
-  .mat-icon-wrap {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: #E3F2FD;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .mat-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .mat-top {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .mat-date {
-    font-size: 12px;
-    color: #757575;
-  }
-
-  .mat-amount {
-    font-size: 14px;
-    font-weight: 700;
-    color: #1565C0;
-  }
-
-  .mat-desc {
-    font-size: 14px;
-    font-weight: 600;
-    color: #212121;
-    margin-top: 2px;
-  }
-
-  .mat-paid-by {
-    font-size: 12px;
-    color: #757575;
-    margin-top: 2px;
-  }
-
-  .mat-notes {
-    font-size: 12px;
-    color: #9E9E9E;
-    font-style: italic;
-    margin-top: 2px;
-  }
 }
 </style>

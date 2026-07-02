@@ -14,9 +14,15 @@
       </div>
       <div v-if="showEarnings" class="souhrn-divider" />
       <div v-if="showEarnings" class="souhrn-item">
-        <div class="souhrn-value text-positive">{{ formatPrice(unpaidEarnings) }}</div>
+        <div class="souhrn-value text-positive">{{ formatPrice(unpaidTotal) }}</div>
         <div class="souhrn-label">{{ t('summary.toPay') }}</div>
       </div>
+    </div>
+
+    <!-- Nezaplacený materiál je součástí částky K proplacení -->
+    <div v-if="showEarnings && unpaidMaterial > 0" class="material-note">
+      <q-icon name="inventory_2" size="12px" />
+      {{ t('summary.inclMaterial', { amount: formatPrice(unpaidMaterial) }) }}
     </div>
 
     <!-- Per collaborator breakdown -->
@@ -33,8 +39,8 @@
         <span class="collab-hours">{{ formatHours(stat.unpaidHours) }}</span>
         <span class="collab-sep">/</span>
         <span class="collab-total">{{ formatHours(stat.totalHours) }}</span>
-        <span v-if="showEarnings && stat.unpaidEarnings > 0" class="collab-earnings text-positive">
-          · {{ formatPrice(stat.unpaidEarnings) }}
+        <span v-if="showEarnings && stat.unpaidTotal > 0" class="collab-earnings text-positive">
+          · {{ formatPrice(stat.unpaidTotal) }}
         </span>
       </div>
     </div>
@@ -60,6 +66,9 @@ const nastaveniStore = useNastaveniStore()
 const entries = computed(() =>
   zaznamyStore.workEntries.filter((e) => e.projectId === props.projectId),
 )
+const materials = computed(() =>
+  zaznamyStore.materialEntries.filter((m) => m.projectId === props.projectId),
+)
 
 const totalHours = computed(() => entries.value.reduce((s, e) => s + e.hours, 0))
 const unpaidHours = computed(() => entries.value.filter((e) => !e.isPaid).reduce((s, e) => s + e.hours, 0))
@@ -69,6 +78,13 @@ const unpaidEarnings = computed(() =>
     .filter((e) => !e.isPaid)
     .reduce((s, e) => s + e.hours * (nastaveniStore.workTypeRates[e.workTypeId] ?? 0), 0),
 )
+
+// Neproplacený materiál — patří do částky K proplacení (proplácí se tomu, kdo ho platil)
+const unpaidMaterial = computed(() =>
+  materials.value.filter((m) => !m.isPaid).reduce((s, m) => s + m.amount, 0),
+)
+
+const unpaidTotal = computed(() => unpaidEarnings.value + unpaidMaterial.value)
 
 const collaboratorStats = computed(() => {
   const collabs = nastaveniStore.collaborators
@@ -80,9 +96,19 @@ const collaboratorStats = computed(() => {
       const unpaidEarnings = ces
         .filter((e) => !e.isPaid)
         .reduce((s, e) => s + e.hours * (nastaveniStore.workTypeRates[e.workTypeId] ?? 0), 0)
-      return { id: c.id, name: c.name, totalHours, unpaidHours, unpaidEarnings }
+      // Materiál zaplacený tímto pracovníkem a zatím neproplacený
+      const unpaidMaterial = materials.value
+        .filter((m) => m.paidById === c.id && !m.isPaid)
+        .reduce((s, m) => s + m.amount, 0)
+      return {
+        id: c.id,
+        name: c.name,
+        totalHours,
+        unpaidHours,
+        unpaidTotal: unpaidEarnings + unpaidMaterial,
+      }
     })
-    .filter((s) => s.totalHours > 0)
+    .filter((s) => s.totalHours > 0 || s.unpaidTotal > 0)
 })
 
 function formatHours(h: number) {
@@ -147,6 +173,16 @@ function formatPrice(p: number) {
   font-size: 11px;
   color: #9E9E9E;
   margin-top: 2px;
+}
+
+.material-note {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 11px;
+  color: #757575;
+  margin-top: 6px;
 }
 
 .collab-row {

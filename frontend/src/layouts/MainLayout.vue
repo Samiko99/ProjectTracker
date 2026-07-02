@@ -41,6 +41,7 @@ import langEnUS from 'quasar/lang/en-US'
 import { useNastaveniStore } from '../stores/nastaveni'
 import { useStavbyStore } from '../stores/stavby'
 import { useAuthStore } from '../stores/auth'
+import { useSyncStore } from '../stores/sync'
 import { t, locale } from '../i18n'
 
 const route = useRoute()
@@ -61,6 +62,14 @@ watch(locale, applyQuasarLang)
 authStore.init()
 nastaveniStore.loadSettings()
 stavbyStore.loadProjects()
+
+// Tichá synchronizace při startu (pokud je uživatel přihlášen)
+const syncStore = useSyncStore()
+if (authStore.isAuthenticated) {
+  syncStore.syncNow().catch(() => {
+    // offline / server nedostupný — appka funguje dál lokálně
+  })
+}
 
 const activeTab = ref('stavby')
 

@@ -403,9 +403,16 @@ async function doSync() {
   }
 }
 
-function onLoggedIn() {
+async function onLoggedIn() {
+  // Jiný účet než posledně → smaž lokální data, ať se účty nesmíchají
+  if (authStore.user) {
+    const cleared = await syncStore.ensureLocalDataOwner(authStore.user.id)
+    if (cleared) {
+      $q.notify({ type: 'info', message: t('settings.dataCleared') })
+    }
+  }
   // Po přihlášení rovnou synchronizuj
-  doSync()
+  await doSync()
 }
 
 function doLogout() {

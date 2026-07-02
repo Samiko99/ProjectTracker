@@ -20,6 +20,7 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USER:-stavdenik}:${DB_PASSWORD}@db:5432/${DB_NAME:-stavebni_denik}?schema=public
       PORT: "3001"
       CORS_ORIGIN: ${APP_ORIGIN:-http://192.168.100.150:9009}

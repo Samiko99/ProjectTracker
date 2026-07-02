@@ -6,7 +6,12 @@ import { useStavbyStore } from './stavby'
 import { useNastaveniStore } from './nastaveni'
 import { useZaznamyStore } from './zaznamy'
 
+// lastSyncAt = čas SERVERU (řídí pull), lastPushAt = čas KLIENTA (řídí push).
+// Oddělené proto, aby posun hodin mezi klientem a serverem nezpůsobil
+// ztrátu lokálních změn (updatedAt se generuje z hodin klienta).
 const LS_LAST_SYNC = 'sync.lastSyncAt'
+const LS_LAST_PUSH = 'sync.lastPushAt'
+const LS_LAST_USER = 'sync.lastUserId'
 
 // Tabulky, které synchronizujeme (pořadí: nadřazené před závislými)
 const TABLES = [
@@ -48,18 +53,23 @@ function cleanRecord(rec: Record<string, unknown>): Record<string, unknown> {
 
 export const useSyncStore = defineStore('sync', () => {
   const lastSyncAt = ref<string | null>(localStorage.getItem(LS_LAST_SYNC))
+  const lastPushAt = ref<string | null>(localStorage.getItem(LS_LAST_PUSH))
   const syncing = ref(false)
   const lastError = ref<string | null>(null)
 
-  function setLastSync(iso: string | null) {
-    lastSyncAt.value = iso
-    if (iso) localStorage.setItem(LS_LAST_SYNC, iso)
+  function setLastSync(serverIso: string | null, pushIso: string | null) {
+    lastSyncAt.value = serverIso
+    lastPushAt.value = pushIso
+    if (serverIso) localStorage.setItem(LS_LAST_SYNC, serverIso)
     else localStorage.removeItem(LS_LAST_SYNC)
+    if (pushIso) localStorage.setItem(LS_LAST_PUSH, pushIso)
+    else localStorage.removeItem(LS_LAST_PUSH)
   }
 
-  // Posbírá lokální změny od posledního syncu
+  // Posbírá lokální změny od posledního push (čas klienta)
   async function collectLocalChanges() {
-    const since = lastSyncAt.value
+    // Fallback na lastSyncAt kvůli datům ze starší verze aplikace
+    const since = lastPushAt.value ?? lastSyncAt.value
     const changes: Record<string, Record<string, unknown>[]> = {}
     for (const name of TABLES) {
       const rows = since
@@ -96,6 +106,24 @@ export const useSyncStore = defineStore('sync', () => {
   }
 
   /**
+   * Ochrana proti smíchání dat dvou účtů na jednom zařízení:
+   * pokud se přihlásí jiný uživatel než posledně, lokální data se smažou
+   * (data předchozího uživatele jsou na serveru). Vrací true, pokud se mazalo.
+   */
+  async function ensureLocalDataOwner(userId: string): Promise<boolean> {
+    const previous = localStorage.getItem(LS_LAST_USER)
+    localStorage.setItem(LS_LAST_USER, userId)
+    if (!previous || previous === userId) return false
+
+    for (const name of TABLES) {
+      await table(name).clear()
+    }
+    setLastSync(null, null)
+    await reloadStores()
+    return true
+  }
+
+  /**
    * Provede plnou synchronizaci: push lokálních změn + pull serverových.
    */
   async function syncNow(): Promise<{ pushed: number; pulled: number }> {
@@ -108,6 +136,9 @@ export const useSyncStore = defineStore('sync', () => {
     syncing.value = true
     lastError.value = null
     try {
+      // Čas klienta PŘED sběrem změn — změny provedené během requestu
+      // mají updatedAt > pushCutoff a půjdou v příští synchronizaci
+      const pushCutoff = new Date().toISOString()
       const localChanges = await collectLocalChanges()
       const pushed = Object.values(localChanges).reduce(
         (s, arr) => s + arr.length,
@@ -120,7 +151,7 @@ export const useSyncStore = defineStore('sync', () => {
       })
 
       const pulled = await applyRemoteChanges(res.changes)
-      setLastSync(res.serverTime)
+      setLastSync(res.serverTime, pushCutoff)
 
       if (pulled > 0) await reloadStores()
 
@@ -163,18 +194,26 @@ export const useSyncStore = defineStore('sync', () => {
       data: Record<TableName, Record<string, unknown>[]>
     }>(`/backup/${id}`)
 
-    // Nahraď lokální data snapshotem
+    // Nahraď lokální data snapshotem. updatedAt posuneme na teď, aby
+    // obnovený stav vyhrál last-write-wins a příští sync ho poslal na server
+    // (jinak by ho pull ze serveru okamžitě zase přepsal).
+    const now = new Date().toISOString()
     for (const name of TABLES) {
       await table(name).clear()
       const rows = res.data[name] ?? []
-      if (rows.length) await table(name).bulkPut(rows.map(cleanRecord))
+      if (rows.length) {
+        await table(name).bulkPut(
+          rows.map((r) => ({ ...cleanRecord(r), updatedAt: now })),
+        )
+      }
     }
+    setLastSync(null, null)
     await reloadStores()
     return res
   }
 
   function resetSyncState() {
-    setLastSync(null)
+    setLastSync(null, null)
     lastError.value = null
   }
 
@@ -183,6 +222,7 @@ export const useSyncStore = defineStore('sync', () => {
     syncing,
     lastError,
     syncNow,
+    ensureLocalDataOwner,
     createBackup,
     listBackups,
     restoreBackup,

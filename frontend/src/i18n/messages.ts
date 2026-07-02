@@ -33,7 +33,8 @@ export const messages = {
     'jobs.deleted': 'Zakázka smazána',
     'jobs.closed': 'Zakázka uzavřena',
     'jobs.reopened': 'Zakázka znovu otevřena',
-    'jobs.allMarkedPaid': 'Všechny hodiny označeny jako zaplacené',
+    'jobs.allMarkedPaid': 'Všechny hodiny a materiál označeny jako zaplacené',
+    'summary.inclMaterial': 'vč. materiálu {amount}',
 
     // Dialog zakázky
     'jobDialog.newTitle': 'Nová zakázka',
@@ -47,11 +48,11 @@ export const messages = {
 
     // Detail zakázky – menu
     'jobMenu.editDetails': 'Upravit detaily',
-    'jobMenu.markAllPaid': 'Odškrtnout všechny hodiny',
+    'jobMenu.markAllPaid': 'Odškrtnout vše (hodiny i materiál)',
     'jobMenu.close': 'Uzavřít zakázku',
     'jobMenu.reopen': 'Znovu otevřít',
-    'jobMenu.markAllPaidTitle': 'Odškrtnout všechny hodiny',
-    'jobMenu.markAllPaidMsg': 'Označit všechny záznamy hodin jako zaplacené?',
+    'jobMenu.markAllPaidTitle': 'Odškrtnout vše',
+    'jobMenu.markAllPaidMsg': 'Označit všechny záznamy hodin i materiálu jako zaplacené?',
     'jobMenu.closeTitle': 'Uzavřít zakázku',
     'jobMenu.closeMsg': 'Zakázka se přesune mezi hotové. Pokračovat?',
     'jobMenu.exportExcel': 'Exportovat do Excelu',
@@ -157,6 +158,7 @@ export const messages = {
     'settings.logoutTitle': 'Odhlásit se',
     'settings.logoutMsg': 'Lokální data zůstanou v zařízení. Opravdu se odhlásit?',
     'settings.loggedOut': 'Odhlášeno',
+    'settings.dataCleared': 'Přihlášen jiný účet — lokální data předchozího účtu byla odebrána (jsou v jeho cloudu)',
     'settings.collaborators': 'Spolupracovníci',
     'settings.collaboratorsSub': 'Osoby přidávané k záznamům',
     'settings.noCollaborators': 'Zatím žádní spolupracovníci',
@@ -235,7 +237,8 @@ export const messages = {
     'jobs.deleted': 'Job deleted',
     'jobs.closed': 'Job closed',
     'jobs.reopened': 'Job reopened',
-    'jobs.allMarkedPaid': 'All hours marked as paid',
+    'jobs.allMarkedPaid': 'All hours and materials marked as paid',
+    'summary.inclMaterial': 'incl. materials {amount}',
 
     // Job dialog
     'jobDialog.newTitle': 'New job',
@@ -249,11 +252,11 @@ export const messages = {
 
     // Job detail – menu
     'jobMenu.editDetails': 'Edit details',
-    'jobMenu.markAllPaid': 'Mark all hours paid',
+    'jobMenu.markAllPaid': 'Mark everything paid (hours & materials)',
     'jobMenu.close': 'Close job',
     'jobMenu.reopen': 'Reopen',
-    'jobMenu.markAllPaidTitle': 'Mark all hours paid',
-    'jobMenu.markAllPaidMsg': 'Mark all hour entries as paid?',
+    'jobMenu.markAllPaidTitle': 'Mark everything paid',
+    'jobMenu.markAllPaidMsg': 'Mark all hour and material entries as paid?',
     'jobMenu.closeTitle': 'Close job',
     'jobMenu.closeMsg': 'The job will move to completed. Continue?',
     'jobMenu.exportExcel': 'Export to Excel',
@@ -359,6 +362,7 @@ export const messages = {
     'settings.logoutTitle': 'Sign out',
     'settings.logoutMsg': 'Local data stays on the device. Really sign out?',
     'settings.loggedOut': 'Signed out',
+    'settings.dataCleared': 'Different account signed in — previous account\'s local data was removed (it lives in their cloud)',
     'settings.collaborators': 'Collaborators',
     'settings.collaboratorsSub': 'People added to entries',
     'settings.noCollaborators': 'No collaborators yet',

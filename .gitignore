@@ -8,3 +8,4 @@ dist/
 login.txt
 tools/prace-parsed.json
 tools/import-payload.json
+ver2/

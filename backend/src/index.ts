@@ -5,8 +5,12 @@ import { config } from './config.js'
 import { authRouter } from './routes/auth.js'
 import { syncRouter } from './routes/sync.js'
 import { backupRouter } from './routes/backup.js'
+import { rateLimit } from './middleware/rateLimit.js'
 
 const app = express()
+
+// Za nginx proxy — kvůli správné klientské IP pro rate limiting
+app.set('trust proxy', 1)
 
 app.use(helmet())
 app.use(
@@ -22,7 +26,8 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() })
 })
 
-app.use('/api/auth', authRouter)
+// Auth endpointy mají rate limit (ochrana proti hádání hesel)
+app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 50 }), authRouter)
 app.use('/api/sync', syncRouter)
 app.use('/api/backup', backupRouter)
 
@@ -41,7 +46,9 @@ app.use(
     _next: express.NextFunction,
   ) => {
     console.error('Neočekávaná chyba:', err)
-    res.status(500).json({ error: 'Vnitřní chyba serveru' })
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Vnitřní chyba serveru' })
+    }
   },
 )
 

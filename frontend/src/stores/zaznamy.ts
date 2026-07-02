@@ -34,6 +34,7 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
   }
 
   async function loadAllEntries() {
+    currentProjectId.value = null
     workEntries.value = (
       await db.workEntries.filter((e) => !e.deletedAt).toArray()
     ).sort((a, b) => a.date.localeCompare(b.date))
@@ -67,29 +68,70 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
   }
 
   async function deleteWorkEntry(id: string) {
+    await deleteWorkEntries([id])
+  }
+
+  // Hromadné (soft) smazání — jedna transakce místa N sekvenčních updatů
+  async function deleteWorkEntries(ids: string[]) {
+    if (!ids.length) return
     const now = new Date().toISOString()
-    await db.workEntries.update(id, { deletedAt: now, updatedAt: now })
-    workEntries.value = workEntries.value.filter((e) => e.id !== id)
+    const idSet = new Set(ids)
+    await db.workEntries
+      .where('id')
+      .anyOf(ids)
+      .modify({ deletedAt: now, updatedAt: now })
+    workEntries.value = workEntries.value.filter((e) => !idSet.has(e.id))
   }
 
   async function togglePaid(id: string, isPaid: boolean) {
     await updateWorkEntry(id, { isPaid })
   }
 
-  // Označí všechny (nezaplacené) záznamy hodin zakázky jako zaplacené
-  async function markAllPaidForProject(projectId: string) {
+  // Hromadné označení zaplaceno/nezaplaceno pro skupinu záznamů
+  async function setPaidForEntries(ids: string[], isPaid: boolean) {
+    if (!ids.length) return
     const now = new Date().toISOString()
-    const toUpdate = workEntries.value.filter(
+    const idSet = new Set(ids)
+    await db.workEntries
+      .where('id')
+      .anyOf(ids)
+      .modify({ isPaid, updatedAt: now })
+    workEntries.value = workEntries.value.map((e) =>
+      idSet.has(e.id) ? { ...e, isPaid, updatedAt: now } : e,
+    )
+  }
+
+  // Hromadné označení materiálu jako (ne)proplaceného
+  async function setPaidForMaterialEntries(ids: string[], isPaid: boolean) {
+    if (!ids.length) return
+    const now = new Date().toISOString()
+    const idSet = new Set(ids)
+    await db.materialEntries
+      .where('id')
+      .anyOf(ids)
+      .modify({ isPaid, updatedAt: now })
+    materialEntries.value = materialEntries.value.map((e) =>
+      idSet.has(e.id) ? { ...e, isPaid, updatedAt: now } : e,
+    )
+  }
+
+  // Označí všechny nezaplacené hodiny i materiál zakázky jako zaplacené
+  async function markAllPaidForProject(projectId: string) {
+    const hoursToUpdate = workEntries.value.filter(
       (e) => e.projectId === projectId && !e.isPaid,
     )
-    for (const e of toUpdate) {
-      await db.workEntries.update(e.id, { isPaid: true, updatedAt: now })
-      const idx = workEntries.value.findIndex((x) => x.id === e.id)
-      if (idx !== -1) {
-        workEntries.value[idx] = { ...workEntries.value[idx], isPaid: true, updatedAt: now }
-      }
-    }
-    return toUpdate.length
+    const materialsToUpdate = materialEntries.value.filter(
+      (m) => m.projectId === projectId && !m.isPaid,
+    )
+    await setPaidForEntries(
+      hoursToUpdate.map((e) => e.id),
+      true,
+    )
+    await setPaidForMaterialEntries(
+      materialsToUpdate.map((m) => m.id),
+      true,
+    )
+    return hoursToUpdate.length + materialsToUpdate.length
   }
 
   async function addMaterialEntry(
@@ -183,7 +225,10 @@ export const useZaznamyStore = defineStore('zaznamy', () => {
     addWorkEntry,
     updateWorkEntry,
     deleteWorkEntry,
+    deleteWorkEntries,
     togglePaid,
+    setPaidForEntries,
+    setPaidForMaterialEntries,
     markAllPaidForProject,
     addMaterialEntry,
     updateMaterialEntry,

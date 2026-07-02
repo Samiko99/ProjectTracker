@@ -42,9 +42,21 @@ export const useStavbyStore = defineStore('stavby', () => {
     }
   }
 
+  // Soft-delete zakázky včetně jejích záznamů (jinak by osiřelé záznamy
+  // smazané zakázky dál strašily v kalendáři a souhrnech)
   async function deleteProject(id: string) {
     const now = new Date().toISOString()
     await db.projects.update(id, { deletedAt: now, updatedAt: now })
+    await db.workEntries
+      .where('projectId')
+      .equals(id)
+      .filter((e) => !e.deletedAt)
+      .modify({ deletedAt: now, updatedAt: now })
+    await db.materialEntries
+      .where('projectId')
+      .equals(id)
+      .filter((e) => !e.deletedAt)
+      .modify({ deletedAt: now, updatedAt: now })
     projects.value = projects.value.filter((p) => p.id !== id)
   }
 
@@ -57,10 +69,13 @@ export const useStavbyStore = defineStore('stavby', () => {
 
   async function reopenProject(id: string) {
     const now = new Date().toISOString()
-    // null = znovu otevřeno (propaguje se synchronizací)
-    await db.projects.update(id, { closedAt: null as unknown as undefined, updatedAt: now })
+    // undefined = Dexie klíč odstraní; sync pak na server pošle null
+    await db.projects.update(id, { closedAt: undefined, updatedAt: now })
     const idx = projects.value.findIndex((p) => p.id === id)
-    if (idx !== -1) projects.value[idx] = { ...projects.value[idx], closedAt: undefined, updatedAt: now }
+    if (idx !== -1) {
+      const { closedAt: _closedAt, ...rest } = projects.value[idx]
+      projects.value[idx] = { ...rest, updatedAt: now }
+    }
   }
 
   function getProjectById(id: string) {

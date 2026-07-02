@@ -85,7 +85,9 @@ export function exportJobToExcel(opts: {
       t('export.colPaid'),
       t('export.colNote'),
     ])
+    let totalMaterial = 0
     for (const m of mats) {
+      totalMaterial += m.amount
       rows.push([
         m.date,
         m.description,
@@ -95,6 +97,7 @@ export function exportJobToExcel(opts: {
         m.notes || '',
       ])
     }
+    rows.push(['', t('export.total'), Math.round(totalMaterial * 100) / 100])
   }
 
   const ws = XLSX.utils.aoa_to_sheet(rows)

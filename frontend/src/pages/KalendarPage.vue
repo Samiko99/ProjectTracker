@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -89,7 +89,8 @@ const previewDateLabel = computed(() => {
 
 const calendarEvents = computed((): EventInput[] => {
   return zaznamyStore.workEntries
-    .filter((e) => !e.deletedAt)
+    // Záznamy smazaných zakázek do kalendáře nepatří
+    .filter((e) => !e.deletedAt && stavbyStore.getProjectById(e.projectId))
     .map((entry) => {
       const project = stavbyStore.getProjectById(entry.projectId)
       const collabName = entry.collaboratorId

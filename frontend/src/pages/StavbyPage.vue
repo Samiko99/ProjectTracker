@@ -117,6 +117,8 @@ async function confirmDelete(project: Project) {
     ok: { label: t('common.delete'), color: 'negative', unelevated: true },
   }).onOk(async () => {
     await stavbyStore.deleteProject(project.id)
+    // Smazání zakázky maže i její záznamy → obnov statistiky karet
+    await zaznamyStore.loadAllEntries()
     $q.notify({ type: 'positive', message: t('jobs.deleted') })
   })
 }

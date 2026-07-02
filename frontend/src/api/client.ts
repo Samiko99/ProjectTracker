@@ -6,6 +6,9 @@
 const isProd = Boolean(import.meta.env?.PROD)
 const DEFAULT_BASE = isProd ? '/api' : 'http://localhost:3001/api'
 
+// Timeout požadavku — bez něj by nedostupný server nechal UI viset donekonečna
+const REQUEST_TIMEOUT_MS = 20_000
+
 export function getApiBaseUrl(): string {
   return localStorage.getItem('apiBaseUrl') || DEFAULT_BASE
 }
@@ -39,15 +42,24 @@ export async function apiFetch<T = unknown>(
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
 
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
   let res: Response
   try {
     res = await fetch(`${getApiBaseUrl()}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     })
-  } catch {
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new ApiError(0, 'Server neodpovídá (vypršel časový limit)')
+    }
     throw new ApiError(0, 'Server není dostupný (zkontroluj připojení)')
+  } finally {
+    clearTimeout(timer)
   }
 
   let data: unknown = null

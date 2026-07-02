@@ -131,7 +131,10 @@ function formatPrice(p: number) {
 }
 
 async function togglePaid(val: boolean) {
-  for (const e of props.entries) await zaznamyStore.togglePaid(e.id, val)
+  await zaznamyStore.setPaidForEntries(
+    props.entries.map((e) => e.id),
+    val,
+  )
 }
 </script>
 

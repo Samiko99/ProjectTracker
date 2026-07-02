@@ -332,7 +332,10 @@ const computedHours = computed(() => {
   if (timeMode.value !== 'range' || !form.value.startTime || !form.value.endTime) return 0
   const [sh, sm] = form.value.startTime.split(':').map(Number)
   const [eh, em] = form.value.endTime.split(':').map(Number)
-  const mins = (eh * 60 + em) - (sh * 60 + sm)
+  if ([sh, sm, eh, em].some(Number.isNaN)) return 0
+  let mins = (eh * 60 + em) - (sh * 60 + sm)
+  // Konec před začátkem = práce přes půlnoc (noční směna)
+  if (mins < 0) mins += 24 * 60
   return mins > 0 ? Math.round((mins / 60) * 100) / 100 : 0
 })
 
